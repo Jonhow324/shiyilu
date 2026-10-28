@@ -8,9 +8,19 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  /* 拾遗录：纸色底、墨色字、印章红。不跟随系统暗色。 */
+  --color-paper: #f4f1ea;
+  --color-ink: #191712;
+  --color-seal: #d23f1c;
+  --color-ink-soft: rgba(25, 23, 18, 0.55);
+  --color-ink-line: rgba(25, 23, 18, 0.18);
+  /* 正文用系统无衬线（稿子是 SF Pro，不嵌入） */
+  --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+    "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --font-serif-sc: var(--font-noto-serif-sc);
+  --font-serif-en: var(--font-instrument-serif);
+  --font-mono: var(--font-jetbrains-mono);
+  --font-heading: var(--font-serif-sc);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -131,5 +141,71 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+/*
+ * 陈列的节奏：每 7 张一轮。
+ * 1 宽（7/12 ≈ 58%）+ 1 窄靠右下移，三张中等并排，再换边（窄在左、宽在右）。
+ * 列位置都写死，行高交给自动行；窄卡用 translateY 下移，错位但不撑高所在行。
+ */
+.exhibit-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: 2rem;
+  row-gap: 4.5rem;
+}
+
+.exhibit-grid > *:nth-child(7n + 1) {
+  grid-column: 1 / span 7;
+}
+.exhibit-grid > *:nth-child(7n + 2) {
+  grid-column: 9 / span 4;
+  transform: translateY(3rem);
+}
+.exhibit-grid > *:nth-child(7n + 3) {
+  grid-column: 1 / span 4;
+}
+.exhibit-grid > *:nth-child(7n + 4) {
+  grid-column: 5 / span 4;
+}
+.exhibit-grid > *:nth-child(7n + 5) {
+  grid-column: 9 / span 4;
+}
+.exhibit-grid > *:nth-child(7n + 6) {
+  grid-column: 1 / span 4;
+  transform: translateY(3rem);
+}
+.exhibit-grid > *:nth-child(7n + 7) {
+  grid-column: 6 / span 7;
+}
+
+/* 宽度不够时先退化成两列，402 窄屏稿是下一张工单的事 */
+@media (max-width: 1100px) {
+  .exhibit-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 1.5rem;
+    row-gap: 3rem;
+  }
+  /* 用 :nth-child(n) 抬高特异性，压过上面的 7n+k 列定位 */
+  .exhibit-grid > :nth-child(n) {
+    grid-column: auto / span 1;
+    transform: none;
+  }
+}
+
+/* 封面比例：宽卡用 16:10，其余 4:3 */
+.exhibit-cover {
+  aspect-ratio: 4 / 3;
+}
+.exhibit-grid > *:nth-child(7n + 1) .exhibit-cover,
+.exhibit-grid > *:nth-child(7n + 7) .exhibit-cover {
+  aspect-ratio: 16 / 10;
+}
+
+/* 两列布局下不再区分宽窄，封面统一 4:3，免得同一行高度参差 */
+@media (max-width: 1100px) {
+  .exhibit-grid > :nth-child(n) .exhibit-cover {
+    aspect-ratio: 4 / 3;
   }
 }

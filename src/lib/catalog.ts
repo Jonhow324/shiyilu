@@ -23,6 +23,12 @@ export interface TagShare {
   percent: number;
 }
 
+/** 标签 + 全库里带这个标签的 Bookmark 数 */
+export interface TagStat {
+  tag: string;
+  count: number;
+}
+
 /** 拾遗录页眉需要的事实 */
 export interface CatalogSummary {
   /** 收录数：Bookmark 条数 */
@@ -56,6 +62,16 @@ function parseCollectedOn(value: string): {
   const month = matched[2];
   const day = matched[3];
   return { year, month, day, ordinal: year * 10000 + Number(month) * 100 + Number(day) };
+}
+
+/**
+ * 把收录日格式化成 YYYY.MM.DD（卡片上的日期、页眉的更新于都用它）。
+ * 解析不出时退回原值的前 10 位，至少不会渲染出一整串时间戳。
+ */
+export function formatCollectedOn(value: string): string {
+  const parsed = parseCollectedOn(value);
+  if (!parsed) return value.trim().slice(0, 10);
+  return `${parsed.year}.${parsed.month}.${parsed.day}`;
 }
 
 /**

@@ -16,8 +16,11 @@
   组件源码在 `src/components/ui/`，由 `npx shadcn@latest add ...` 生成，可安全重跑覆盖
 - **tweakcn 主题**：`globals.css` 里的 `:root` / `.dark` 用的是 tweakcn「Violet Dark」（石墨底 + 紫色点缀）
 - **lucide-react**：图标
-- **next-themes**：`<html>` 上的 `.dark` class 随系统 `prefers-color-scheme` 切换，首屏不闪白
 - **sonner**：toast 提示（401、保存成功、加载失败等）
+
+公开页「拾遗录」走自己的一套：纸色底 `#f4f1ea`、墨色字 `#191712`、印章红 `#d23f1c`，
+字体是 Noto Serif SC（中文标题）、Instrument Serif（英文斜体与大数字）、JetBrains Mono（小标签），
+**不跟随系统暗色**。上面的 shadcn 主题变量只留给后续的编辑界面用。
 
 已安装的 shadcn 组件：`sidebar` `sheet` `card` `badge` `input` `textarea` `button` `dialog` `sonner`
 （连带生成 `separator` `tooltip` `skeleton` 与 `src/hooks/use-mobile.ts`）。
@@ -94,6 +97,7 @@ npm test        # 等价于 tsx --test src/lib/*.test.ts
 | `PATCH` | `/api/bookmarks/[id]` | Bearer | 局部更新，只传要改的字段 |
 | `DELETE` | `/api/bookmarks/[id]` | Bearer | 删除 |
 | `GET` | `/api/tags` | 公开 | `[{ tag, count }]` |
+| `GET` | `/api/cover?url=` | 公开 | 代取封面截图（只接受 http/https）。取不到返回 `404 {"error":"显影中"}`，图片缓存一天 |
 | `POST` | `/api/mcp` | 见下 | MCP Streamable HTTP 端点 |
 
 鉴权方式：`Authorization: Bearer <NAV_TOKEN>`。不匹配返回 `401` + `{"error":"unauthorized"}`。
