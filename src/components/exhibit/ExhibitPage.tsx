@@ -1,14 +1,30 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  useTransition,
+} from "react";
 import { useRouter } from "next/navigation";
 import type { Bookmark, ListOrder } from "@/lib/bookmarks";
 import type { CatalogSummary, CatalogView, TagStat } from "@/lib/catalog";
+import { verifyToken } from "@/lib/token-check";
+import {
+  clearToken,
+  getServerTokenSnapshot,
+  getTokenSnapshot,
+  saveToken,
+  subscribeToken,
+} from "@/lib/token-store";
+import BookmarkFormLayer, { type BookmarkPayload } from "./BookmarkFormLayer";
 import ExhibitCard from "./ExhibitCard";
 import ExhibitFooter from "./ExhibitFooter";
 import ExhibitHeader from "./ExhibitHeader";
 import ExhibitIndex from "./ExhibitIndex";
 import ExhibitToolbar from "./ExhibitToolbar";
+import UnlockLayer from "./UnlockLayer";
 
 interface Props {
   /** 已经按检索词、标签、排序筛好的这一屏 */
@@ -27,11 +43,20 @@ interface Props {
 /** 检索防抖：输入停下再写地址栏，避免每个键都跑一次服务端 */
 const QUERY_DEBOUNCE_MS = 250;
 
+type Layer = { kind: "unlock" } | { kind: "form"; bookmark: Bookmark | null } | null;
+
+type WriteResult =
+  | { ok: true }
+  | { ok: false; error: string; unauthorized?: boolean };
+
 /**
  * 拾遗录的宽屏页。
  *
  * 地址栏是唯一状态：检索词、标签、排序、看法都写进 ?q= / ?tags= / ?order= / ?view=，
  * 服务端按 searchParams 先筛再渲染，所以刷新、分享链接都能还原同一屏。
+ *
+ * 写入：访客只读。页脚「编辑」输一把 Read Token 解锁后，工具条出现「新收录」，
+ * 陈列与索引出现「改」「删」。写完统一 router.refresh()，让服务端重新读库。
  */
 export default function ExhibitPage({
   bookmarks,
@@ -51,6 +76,18 @@ export default function ExhibitPage({
   const [view, setView] = useState<CatalogView>(initialView);
   const inputRef = useRef<HTMLInputElement>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // token 是 React 之外的存储（localStorage），用订阅而不是在 effect 里读一次
+  const token = useSyncExternalStore(
+    subscribeToken,
+    getTokenSnapshot,
+    getServerTokenSnapshot,
+  );
+  const canWrite = token !== null;
+
+  const [layer, setLayer] = useState<Layer>(null);
+  const [layerError, setLayerError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   function clearTimer() {
     if (timer.current) {
@@ -131,6 +168,106 @@ export default function ExhibitPage({
     navigate({ view: next });
   }
 
+  /** 写接口统一入口：带 Bearer，401 就清钥匙并弹出解锁层 */
+  async function write(path: string, init: RequestInit): Promise<WriteResult> {
+    const headers = new Headers(init.headers);
+    headers.set("Content-Type", "application/json");
+    if (token) headers.set("Authorization", `Bearer ${token}`);
+
+    let response: Response;
+    try {
+      response = await fetch(path, { ...init, headers });
+    } catch {
+      return { ok: false, error: "网络请求失败，请稍后再试。" };
+    }
+
+    if (response.status === 401) {
+      const message = "Read Token 不对，请重新输入。";
+      clearToken();
+      setLayerError(message);
+      setLayer({ kind: "unlock" });
+      return { ok: false, error: message, unauthorized: true };
+    }
+
+    if (!response.ok) {
+      const data = (await response.json().catch(() => null)) as {
+        error?: string;
+      } | null;
+      return { ok: false, error: data?.error ?? "写入失败，请稍后再试。" };
+    }
+
+    return { ok: true };
+  }
+
+  /** 解锁层：先拿钥匙去探一个不存在的编号，404 才算对；不对就什么都不存 */
+  async function handleUnlock(candidate: string): Promise<string | null> {
+    const result = await verifyToken(candidate);
+
+    if (result === "ok") {
+      saveToken(candidate);
+      setLayer(null);
+      setLayerError(null);
+      return null;
+    }
+    if (result === "invalid") return "Read Token 不对，请再试一次。";
+    return "暂时验证不了这把钥匙，稍后再试。";
+  }
+
+  function handleToggleUnlock() {
+    if (canWrite) {
+      clearToken();
+      setNotice(null);
+      return;
+    }
+    setLayerError(null);
+    setLayer({ kind: "unlock" });
+  }
+
+  function handleEdit(bookmark: Bookmark) {
+    setNotice(null);
+    setLayer({ kind: "form", bookmark });
+  }
+
+  function handleCreate() {
+    setNotice(null);
+    setLayer({ kind: "form", bookmark: null });
+  }
+
+  async function handleSave(
+    payload: BookmarkPayload,
+    target: Bookmark | null,
+  ): Promise<string | null> {
+    const result = target
+      ? await write(`/api/bookmarks/${target.id}`, {
+          method: "PATCH",
+          body: JSON.stringify(payload),
+        })
+      : await write("/api/bookmarks", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+
+    if (!result.ok) return result.error;
+
+    setLayer(null);
+    setNotice(null);
+    router.refresh();
+    return null;
+  }
+
+  async function handleDelete(bookmark: Bookmark) {
+    const result = await write(`/api/bookmarks/${bookmark.id}`, {
+      method: "DELETE",
+    });
+
+    if (result.ok) {
+      setNotice(null);
+      router.refresh();
+      return;
+    }
+    if (!result.unauthorized) setNotice(result.error);
+  }
+
   // 「/」把光标放进检索框；已经落在输入类元素里时不抢
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -158,7 +295,8 @@ export default function ExhibitPage({
   }, []);
 
   return (
-    <main className="mx-auto w-full max-w-[2640px] px-5 pt-6 pb-16 md:px-10 md:pt-8 md:pb-24">
+    <>
+      <main className="mx-auto w-full max-w-[2640px] px-5 pt-6 pb-16 md:px-10 md:pt-8 md:pb-24">
       <ExhibitHeader
         summary={summary}
         selectedTags={selectedTags}
@@ -171,12 +309,14 @@ export default function ExhibitPage({
         selectedTags={selectedTags}
         order={order}
         view={view}
+        canWrite={canWrite}
         inputRef={inputRef}
         onQueryChange={handleQueryChange}
         onQuerySubmit={handleQuerySubmit}
         onToggleTag={handleToggleTag}
         onToggleOrder={handleToggleOrder}
         onChangeView={handleChangeView}
+        onCreate={handleCreate}
       />
 
       <div className="mt-10 flex items-baseline justify-between gap-6">
@@ -193,8 +333,23 @@ export default function ExhibitPage({
         </p>
       </div>
 
+      {notice ? (
+        <p
+          role="alert"
+          className="mt-6 border border-seal/30 bg-seal/[0.04] px-4 py-3 text-sm text-seal"
+        >
+          {notice}
+        </p>
+      ) : null}
+
       {view === "index" ? (
-        <ExhibitIndex bookmarks={bookmarks} onToggleTag={handleToggleTag} />
+        <ExhibitIndex
+          bookmarks={bookmarks}
+          onToggleTag={handleToggleTag}
+          canWrite={canWrite}
+          onEdit={handleEdit}
+          onDelete={(bookmark) => void handleDelete(bookmark)}
+        />
       ) : (
         <>
           <div
@@ -208,6 +363,9 @@ export default function ExhibitPage({
                 key={bookmark.id}
                 bookmark={bookmark}
                 onToggleTag={handleToggleTag}
+                canWrite={canWrite}
+                onEdit={handleEdit}
+                onDelete={(target) => void handleDelete(target)}
               />
             ))}
           </div>
@@ -222,7 +380,32 @@ export default function ExhibitPage({
         </>
       )}
 
-      <ExhibitFooter total={totalCount} />
+      <ExhibitFooter
+        total={totalCount}
+        unlocked={canWrite}
+        onToggleUnlock={handleToggleUnlock}
+      />
     </main>
+
+      {layer?.kind === "unlock" ? (
+        <UnlockLayer
+          initialError={layerError}
+          onUnlock={handleUnlock}
+          onClose={() => {
+            setLayer(null);
+            setLayerError(null);
+          }}
+        />
+      ) : null}
+
+      {layer?.kind === "form" ? (
+        <BookmarkFormLayer
+          key={layer.bookmark?.id ?? "new"}
+          bookmark={layer.bookmark}
+          onSubmit={(payload) => handleSave(payload, layer.bookmark)}
+          onClose={() => setLayer(null)}
+        />
+      ) : null}
+    </>
   );
 }

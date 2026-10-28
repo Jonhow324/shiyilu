@@ -5,14 +5,25 @@ import type { Bookmark } from "@/lib/bookmarks";
 import { formatCollectedOn, padNo } from "@/lib/catalog";
 import { tagColor } from "@/lib/tag-color";
 import Cover from "./Cover";
+import EditActions from "./EditActions";
 
 interface Props {
   bookmark: Bookmark;
   onToggleTag: (tag: string) => void;
+  /** 解锁后才为 true；为 false 时卡片上不会出现改/删 */
+  canWrite: boolean;
+  onEdit: (bookmark: Bookmark) => void;
+  onDelete: (bookmark: Bookmark) => void;
 }
 
 /** 陈列里的一张卡：封面、角标编号、域名与收录日、标题、描述、标签 */
-export default function ExhibitCard({ bookmark, onToggleTag }: Props) {
+export default function ExhibitCard({
+  bookmark,
+  onToggleTag,
+  canWrite,
+  onEdit,
+  onDelete,
+}: Props) {
   const host = hostOf(bookmark.url);
 
   return (
@@ -58,8 +69,8 @@ export default function ExhibitCard({ bookmark, onToggleTag }: Props) {
         </p>
       ) : null}
 
-      {bookmark.tags.length > 0 ? (
-        <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
+      {bookmark.tags.length > 0 || canWrite ? (
+        <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
           {bookmark.tags.map((tag) => (
             <button
               key={tag}
@@ -76,6 +87,15 @@ export default function ExhibitCard({ bookmark, onToggleTag }: Props) {
               {tag}
             </button>
           ))}
+
+          {/* 没有标签时这一行只放改/删，正好接在描述下面 */}
+          {canWrite ? (
+            <EditActions
+              className="ml-auto"
+              onEdit={() => onEdit(bookmark)}
+              onDelete={() => onDelete(bookmark)}
+            />
+          ) : null}
         </div>
       ) : null}
     </article>

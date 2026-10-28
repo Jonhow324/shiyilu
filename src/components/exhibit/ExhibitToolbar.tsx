@@ -11,12 +11,15 @@ interface Props {
   selectedTags: string[];
   order: ListOrder;
   view: CatalogView;
+  /** 解锁后才出现「新收录」 */
+  canWrite: boolean;
   inputRef: RefObject<HTMLInputElement | null>;
   onQueryChange: (value: string) => void;
   onQuerySubmit: () => void;
   onToggleTag: (tag: string) => void;
   onToggleOrder: () => void;
   onChangeView: (view: CatalogView) => void;
+  onCreate: () => void;
 }
 
 /** 工具条：检索、标签多选、看法切换、排序 */
@@ -26,12 +29,14 @@ export default function ExhibitToolbar({
   selectedTags,
   order,
   view,
+  canWrite,
   inputRef,
   onQueryChange,
   onQuerySubmit,
   onToggleTag,
   onToggleOrder,
   onChangeView,
+  onCreate,
 }: Props) {
   const selected = new Set(selectedTags.map((tag) => tag.toLowerCase()));
 
@@ -97,6 +102,16 @@ export default function ExhibitToolbar({
           >
             {order === "newest" ? "↓ 最近收录" : "↑ 最早收录"}
           </button>
+
+          {canWrite ? (
+            <button
+              type="button"
+              onClick={onCreate}
+              className="font-mono text-[10px] tracking-[0.16em] text-ink uppercase underline decoration-ink/30 underline-offset-4 transition-colors hover:text-seal hover:decoration-seal"
+            >
+              新收录
+            </button>
+          ) : null}
         </div>
       </div>
 

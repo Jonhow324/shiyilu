@@ -4,23 +4,32 @@ import { hostOf } from "@/components/Favicon";
 import type { Bookmark } from "@/lib/bookmarks";
 import { padNo } from "@/lib/catalog";
 import { tagColor } from "@/lib/tag-color";
+import EditActions from "./EditActions";
 
 interface Props {
   bookmarks: Bookmark[];
   onToggleTag: (tag: string) => void;
+  /** 解锁后才为 true；为 false 时行里不会出现改/删 */
+  canWrite: boolean;
+  onEdit: (bookmark: Bookmark) => void;
+  onDelete: (bookmark: Bookmark) => void;
 }
 
 /**
  * 索引：同一批 Bookmark 的表，宽窄两套标记。
  *
  * 宽屏（md 及以上）五列：编号、名称、简介、标签、访问，简介不换行、没有域名。
- * 整行是一个链接（覆盖整行的隐形 <a>），行尾的 → 只是标记；标签按钮抬到链接之上，
- * 点标签只筛选、不跳转。
+ * 整行是一个链接（覆盖整行的隐形 <a>），行尾的 → 只是标记；标签与改/删抬到链接之上。
  *
  * 窄屏（小于 md）是另一套行：左边编号，右边名称 + 箭头、换行的简介、域名，不显示标签。
- * 整行本身就是链接。
  */
-export default function ExhibitIndex({ bookmarks, onToggleTag }: Props) {
+export default function ExhibitIndex({
+  bookmarks,
+  onToggleTag,
+  canWrite,
+  onEdit,
+  onDelete,
+}: Props) {
   return (
     <>
       {/* 窄屏索引 */}
@@ -32,13 +41,17 @@ export default function ExhibitIndex({ bookmarks, onToggleTag }: Props) {
         ) : (
           <ul className="border-t border-ink-line">
             {bookmarks.map((bookmark) => (
-              <li key={bookmark.id} className="border-b border-ink-line/70">
+              <li key={bookmark.id} className="relative border-b border-ink-line/70">
                 <a
                   href={bookmark.url}
                   target="_blank"
                   rel="noreferrer"
-                  className="grid grid-cols-[2.5rem_1fr] gap-3 py-5 transition-colors active:bg-ink/[0.03]"
+                  className="absolute inset-0 z-0"
                 >
+                  <span className="sr-only">打开 {bookmark.title}</span>
+                </a>
+
+                <div className="grid grid-cols-[2.5rem_1fr] gap-3 py-5">
                   <span className="pt-1 font-mono text-[11px] tracking-[0.1em] text-ink-soft">
                     {padNo(bookmark.id)}
                   </span>
@@ -48,9 +61,17 @@ export default function ExhibitIndex({ bookmarks, onToggleTag }: Props) {
                       <h3 className="font-serif-sc text-[1.2rem] leading-snug font-black tracking-tight">
                         {bookmark.title}
                       </h3>
-                      <span aria-hidden className="shrink-0 text-ink-soft">
-                        →
-                      </span>
+                      <div className="flex shrink-0 items-center gap-3">
+                        {canWrite ? (
+                          <EditActions
+                            onEdit={() => onEdit(bookmark)}
+                            onDelete={() => onDelete(bookmark)}
+                          />
+                        ) : null}
+                        <span aria-hidden className="text-ink-soft">
+                          →
+                        </span>
+                      </div>
                     </div>
 
                     {bookmark.description ? (
@@ -63,7 +84,7 @@ export default function ExhibitIndex({ bookmarks, onToggleTag }: Props) {
                       {hostOf(bookmark.url)}
                     </span>
                   </div>
-                </a>
+                </div>
               </li>
             ))}
           </ul>
@@ -79,7 +100,7 @@ export default function ExhibitIndex({ bookmarks, onToggleTag }: Props) {
         >
           <div
             role="row"
-            className="grid grid-cols-[5rem_minmax(10rem,1fr)_minmax(0,2.2fr)_minmax(9rem,0.9fr)_2rem] items-center gap-6 border-b border-ink-line/70 py-3 font-mono text-[10px] tracking-[0.2em] text-ink-soft uppercase"
+            className="grid grid-cols-[5rem_minmax(10rem,1fr)_minmax(0,2.2fr)_minmax(9rem,0.9fr)_minmax(2rem,auto)] items-center gap-6 border-b border-ink-line/70 py-3 font-mono text-[10px] tracking-[0.2em] text-ink-soft uppercase"
           >
             <span role="columnheader">No.</span>
             <span role="columnheader">名称</span>
@@ -102,7 +123,7 @@ export default function ExhibitIndex({ bookmarks, onToggleTag }: Props) {
               <div
                 key={bookmark.id}
                 role="row"
-                className="group relative grid min-h-[75px] grid-cols-[5rem_minmax(10rem,1fr)_minmax(0,2.2fr)_minmax(9rem,0.9fr)_2rem] items-center gap-6 border-b border-ink-line/70 py-3 transition-colors hover:bg-ink/[0.02]"
+                className="group relative grid min-h-[75px] grid-cols-[5rem_minmax(10rem,1fr)_minmax(0,2.2fr)_minmax(9rem,0.9fr)_minmax(2rem,auto)] items-center gap-6 border-b border-ink-line/70 py-3 transition-colors hover:bg-ink/[0.02]"
               >
                 <span
                   role="cell"
@@ -152,13 +173,23 @@ export default function ExhibitIndex({ bookmarks, onToggleTag }: Props) {
                   ))}
                 </div>
 
-                <span
+                <div
                   role="cell"
-                  aria-hidden
-                  className="text-right font-mono text-sm text-ink-soft transition-colors group-hover:text-seal"
+                  className="relative z-10 flex items-center justify-end gap-5"
                 >
-                  →
-                </span>
+                  {canWrite ? (
+                    <EditActions
+                      onEdit={() => onEdit(bookmark)}
+                      onDelete={() => onDelete(bookmark)}
+                    />
+                  ) : null}
+                  <span
+                    aria-hidden
+                    className="font-mono text-sm text-ink-soft transition-colors group-hover:text-seal"
+                  >
+                    →
+                  </span>
+                </div>
               </div>
             ))
           )}
