@@ -29,6 +29,9 @@ export interface TagStat {
   count: number;
 }
 
+/** 拾遗录的两种看法：陈列（封面拼贴）与索引（表），记在地址栏 ?view= */
+export type CatalogView = "exhibit" | "index";
+
 /** 拾遗录页眉需要的事实 */
 export interface CatalogSummary {
   /** 收录数：Bookmark 条数 */

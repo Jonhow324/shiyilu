@@ -1,5 +1,6 @@
 import type { ListOrder } from "@/lib/bookmarks";
 import { listBookmarks } from "@/lib/bookmarks";
+import type { CatalogView } from "@/lib/catalog";
 import { catalogCount, summarizeCatalog } from "@/lib/catalog";
 import { parseTagsParam } from "@/lib/http";
 import ExhibitPage from "@/components/exhibit/ExhibitPage";
@@ -13,13 +14,15 @@ function first(value: string | string[] | undefined): string {
   return value ?? "";
 }
 
-/** 首页：拾遗录的宽屏陈列。筛选参数从地址栏来，服务端先筛再渲染 */
+/** 首页：拾遗录。筛选参数与看法从地址栏来，服务端先筛再渲染 */
 export default async function Home({ searchParams }: PageProps<"/">) {
   const params = await searchParams;
 
   const query = first(params.q).trim();
   const tags = parseTagsParam(first(params.tags));
   const order: ListOrder = first(params.order) === "oldest" ? "oldest" : "newest";
+  // 缺省或 view=exhibit 都是陈列，只有 view=index 才是索引
+  const view: CatalogView = first(params.view) === "index" ? "index" : "exhibit";
 
   const all = listBookmarks();
   const bookmarks = listBookmarks({ query, tags, order });
@@ -40,6 +43,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
       query={query}
       selectedTags={tags}
       order={order}
+      view={view}
     />
   );
 }

@@ -2,7 +2,7 @@
 
 import type { RefObject } from "react";
 import type { ListOrder } from "@/lib/bookmarks";
-import type { TagStat } from "@/lib/catalog";
+import type { CatalogView, TagStat } from "@/lib/catalog";
 import { tagColor } from "@/lib/tag-color";
 
 interface Props {
@@ -10,24 +10,28 @@ interface Props {
   tags: TagStat[];
   selectedTags: string[];
   order: ListOrder;
+  view: CatalogView;
   inputRef: RefObject<HTMLInputElement | null>;
   onQueryChange: (value: string) => void;
   onQuerySubmit: () => void;
   onToggleTag: (tag: string) => void;
   onToggleOrder: () => void;
+  onChangeView: (view: CatalogView) => void;
 }
 
-/** 工具条：检索、标签多选、看法切换（索引未开放）、排序 */
+/** 工具条：检索、标签多选、看法切换、排序 */
 export default function ExhibitToolbar({
   query,
   tags,
   selectedTags,
   order,
+  view,
   inputRef,
   onQueryChange,
   onQuerySubmit,
   onToggleTag,
   onToggleOrder,
+  onChangeView,
 }: Props) {
   const selected = new Set(selectedTags.map((tag) => tag.toLowerCase()));
 
@@ -62,16 +66,27 @@ export default function ExhibitToolbar({
         </label>
 
         <div className="ml-auto flex items-center gap-8">
-          <div className="flex items-center gap-4 font-mono text-[10px] tracking-[0.16em] uppercase">
-            <span className="border-b border-ink pb-0.5 text-ink">陈列</span>
-            <button
-              type="button"
-              disabled
-              title="索引视图留到下一张工单"
-              className="cursor-not-allowed text-ink/30"
-            >
-              索引
-            </button>
+          <div className="flex items-center gap-2 font-mono text-[10px] tracking-[0.16em] uppercase">
+            {(
+              [
+                ["exhibit", "陈列"],
+                ["index", "索引"],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => onChangeView(value)}
+                aria-pressed={view === value}
+                className={`px-2.5 py-1 transition-colors ${
+                  view === value
+                    ? "bg-ink text-paper"
+                    : "border border-ink-line text-ink-soft hover:text-ink"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
 
           <button

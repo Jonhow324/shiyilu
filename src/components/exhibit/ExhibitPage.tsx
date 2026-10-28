@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { Bookmark, ListOrder } from "@/lib/bookmarks";
-import type { CatalogSummary, TagStat } from "@/lib/catalog";
+import type { CatalogSummary, CatalogView, TagStat } from "@/lib/catalog";
 import ExhibitCard from "./ExhibitCard";
 import ExhibitFooter from "./ExhibitFooter";
 import ExhibitHeader from "./ExhibitHeader";
+import ExhibitIndex from "./ExhibitIndex";
 import ExhibitToolbar from "./ExhibitToolbar";
 
 interface Props {
@@ -20,15 +21,16 @@ interface Props {
   query: string;
   selectedTags: string[];
   order: ListOrder;
+  view: CatalogView;
 }
 
 /** 检索防抖：输入停下再写地址栏，避免每个键都跑一次服务端 */
 const QUERY_DEBOUNCE_MS = 250;
 
 /**
- * 拾遗录的宽屏陈列。
+ * 拾遗录的宽屏页。
  *
- * 地址栏是唯一状态：检索词、标签、排序都写进 ?q= / ?tags= / ?order=，
+ * 地址栏是唯一状态：检索词、标签、排序、看法都写进 ?q= / ?tags= / ?order= / ?view=，
  * 服务端按 searchParams 先筛再渲染，所以刷新、分享链接都能还原同一屏。
  */
 export default function ExhibitPage({
@@ -39,12 +41,14 @@ export default function ExhibitPage({
   query: initialQuery,
   selectedTags: initialTags,
   order: initialOrder,
+  view: initialView,
 }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [query, setQuery] = useState(initialQuery);
   const [selectedTags, setSelectedTags] = useState(initialTags);
   const [order, setOrder] = useState<ListOrder>(initialOrder);
+  const [view, setView] = useState<CatalogView>(initialView);
   const inputRef = useRef<HTMLInputElement>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -56,15 +60,22 @@ export default function ExhibitPage({
   }
 
   function navigate(next: {
-    query: string;
-    tags: string[];
-    order: ListOrder;
+    query?: string;
+    tags?: string[];
+    order?: ListOrder;
+    view?: CatalogView;
   }) {
     const params = new URLSearchParams();
-    const trimmed = next.query.trim();
+    const trimmed = (next.query ?? query).trim();
+    const nextTags = next.tags ?? selectedTags;
+    const nextOrder = next.order ?? order;
+    const nextView = next.view ?? view;
+
     if (trimmed) params.set("q", trimmed);
-    if (next.tags.length > 0) params.set("tags", next.tags.join(","));
-    if (next.order === "oldest") params.set("order", "oldest");
+    if (nextTags.length > 0) params.set("tags", nextTags.join(","));
+    if (nextOrder === "oldest") params.set("order", "oldest");
+    // 陈列是默认看法，不写进地址栏
+    if (nextView === "index") params.set("view", "index");
 
     const search = params.toString();
     startTransition(() => {
@@ -77,13 +88,13 @@ export default function ExhibitPage({
     clearTimer();
     timer.current = setTimeout(() => {
       timer.current = null;
-      navigate({ query: value, tags: selectedTags, order });
+      navigate({ query: value });
     }, QUERY_DEBOUNCE_MS);
   }
 
   function handleQuerySubmit() {
     clearTimer();
-    navigate({ query, tags: selectedTags, order });
+    navigate({ query });
   }
 
   function handleToggleTag(tag: string) {
@@ -103,14 +114,21 @@ export default function ExhibitPage({
 
     setSelectedTags(ordered);
     clearTimer();
-    navigate({ query, tags: ordered, order });
+    navigate({ tags: ordered });
   }
 
   function handleToggleOrder() {
     const next: ListOrder = order === "newest" ? "oldest" : "newest";
     setOrder(next);
     clearTimer();
-    navigate({ query, tags: selectedTags, order: next });
+    navigate({ order: next });
+  }
+
+  function handleChangeView(next: CatalogView) {
+    if (next === view) return;
+    setView(next);
+    clearTimer();
+    navigate({ view: next });
   }
 
   // 「/」把光标放进检索框；已经落在输入类元素里时不抢
@@ -152,11 +170,13 @@ export default function ExhibitPage({
         tags={tags}
         selectedTags={selectedTags}
         order={order}
+        view={view}
         inputRef={inputRef}
         onQueryChange={handleQueryChange}
         onQuerySubmit={handleQuerySubmit}
         onToggleTag={handleToggleTag}
         onToggleOrder={handleToggleOrder}
+        onChangeView={handleChangeView}
       />
 
       <div className="mt-10 flex items-baseline justify-between gap-6">
@@ -173,28 +193,34 @@ export default function ExhibitPage({
         </p>
       </div>
 
-      <div
-        aria-busy={isPending}
-        className={`exhibit-grid mt-10 transition-opacity ${
-          isPending ? "opacity-50" : "opacity-100"
-        }`}
-      >
-        {bookmarks.map((bookmark) => (
-          <ExhibitCard
-            key={bookmark.id}
-            bookmark={bookmark}
-            onToggleTag={handleToggleTag}
-          />
-        ))}
-      </div>
+      {view === "index" ? (
+        <ExhibitIndex bookmarks={bookmarks} onToggleTag={handleToggleTag} />
+      ) : (
+        <>
+          <div
+            aria-busy={isPending}
+            className={`exhibit-grid mt-10 transition-opacity ${
+              isPending ? "opacity-50" : "opacity-100"
+            }`}
+          >
+            {bookmarks.map((bookmark) => (
+              <ExhibitCard
+                key={bookmark.id}
+                bookmark={bookmark}
+                onToggleTag={handleToggleTag}
+              />
+            ))}
+          </div>
 
-      {bookmarks.length === 0 ? (
-        <p className="mt-16 border-t border-ink-line pt-8 text-sm text-ink/60">
-          {totalCount === 0
-            ? "还没有收录。等第一条书签进来，这里就热闹了。"
-            : "没有匹配的收录。换个词，或者去掉一个标签试试。"}
-        </p>
-      ) : null}
+          {bookmarks.length === 0 ? (
+            <p className="mt-16 border-t border-ink-line pt-8 text-sm text-ink/60">
+              {totalCount === 0
+                ? "还没有收录。等第一条书签进来，这里就热闹了。"
+                : "没有匹配的收录。换个词，或者去掉一个标签试试。"}
+            </p>
+          ) : null}
+        </>
+      )}
 
       <ExhibitFooter total={totalCount} />
     </main>
