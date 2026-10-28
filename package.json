@@ -8,6 +8,7 @@
     "start": "node .next/standalone/server.js",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
+    "test": "tsx --test src/lib/*.test.ts",
     "seed": "tsx scripts/seed.ts"
   },
   "dependencies": {

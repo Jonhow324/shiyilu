@@ -56,7 +56,20 @@ npm run dev          # http://localhost:3000
 | `npm start` | 以 standalone 产物启动（需先 build） |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | `tsc --noEmit` |
-| `npm run seed` | 写入示例书签，可重复执行 |
+| `npm test` | `tsx --test src/lib/*.test.ts`（node:test，临时数据库，不动 `data/nav.db`） |
+| `npm run seed` | 写入种子书签，可重复执行 |
+
+### 测试
+
+用 `node:test` + `tsx`，不引入 jest / vitest：
+
+```bash
+npm test        # 等价于 tsx --test src/lib/*.test.ts
+```
+
+脚本写成 `src/lib/*.test.ts` 而不是 `src/**/*.test.ts`：npm 用 `sh` 执行脚本，`**` 不会展开。
+测试在 `beforeEach` 里新建临时数据库并把 `NAV_DB_PATH` 指过去，同时清掉 `globalThis.__navDb`
+的连接缓存，所以不会读写仓库里的 `data/nav.db`。
 
 ---
 

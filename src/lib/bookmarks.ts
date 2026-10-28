@@ -47,11 +47,16 @@ export interface UpdateInput {
   tags?: string[];
 }
 
+/** 列表排序：newest 收录日新的在前，oldest 收录日早的在前 */
+export type ListOrder = "newest" | "oldest";
+
 export interface ListOptions {
-  /** 对 title + description 做大小写不敏感的模糊匹配 */
+  /** 对 title + description + url 做大小写不敏感的模糊匹配 */
   query?: string;
   /** 标签过滤，语义见 listBookmarks 注释 */
   tags?: string[];
+  /** 按收录日排序，默认 newest */
+  order?: ListOrder;
 }
 
 function toBookmark(row: BookmarkRow): Bookmark {
@@ -174,11 +179,12 @@ export function parseId(raw: unknown): number {
 /**
  * 查询书签列表。
  *
- * - query：对 title 和 description 做 LIKE 模糊匹配，大小写不敏感（SQLite LOWER()）。
+ * - query：对 title、description 和 url 做 LIKE 模糊匹配，大小写不敏感（SQLite LOWER()）。
  * - tags：**AND 语义**——返回同时带有全部指定标签的书签（选得越多结果越少）。
  *   这样左栏多选标签时行为是「逐步收窄」，符合直觉；需要「任一匹配」时调用方自己拆成多次查询并集。
  *   标签比较大小写不敏感。
- * - 排序：按 updated_at 倒序（最近改动的在前），同值按 id 倒序。
+ * - 排序：按收录日 created_at 排序（默认 newest：倒序，同值按 id 倒序；oldest：正序，同值按 id 正序），
+ *   不再看 updated_at。
  */
 export function listBookmarks(options: ListOptions = {}): Bookmark[] {
   const db = getDb();
@@ -190,9 +196,9 @@ export function listBookmarks(options: ListOptions = {}): Bookmark[] {
   if (query) {
     const like = `%${escapeLike(query.toLowerCase())}%`;
     where.push(
-      "(LOWER(title) LIKE ? ESCAPE '\\' OR LOWER(description) LIKE ? ESCAPE '\\')",
+      "(LOWER(title) LIKE ? ESCAPE '\\' OR LOWER(description) LIKE ? ESCAPE '\\' OR LOWER(url) LIKE ? ESCAPE '\\')",
     );
-    params.push(like, like);
+    params.push(like, like, like);
   }
 
   const tags = (options.tags ?? []).map((t) => t.trim()).filter(Boolean);
@@ -203,10 +209,15 @@ export function listBookmarks(options: ListOptions = {}): Bookmark[] {
     params.push(tag);
   }
 
+  const orderBy =
+    options.order === "oldest"
+      ? "datetime(created_at) ASC, id ASC"
+      : "datetime(created_at) DESC, id DESC";
+
   const sql = `
     SELECT * FROM bookmarks
     ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
-    ORDER BY datetime(updated_at) DESC, id DESC
+    ORDER BY ${orderBy}
   `;
 
   return (db.prepare(sql).all(...params) as BookmarkRow[]).map(toBookmark);
