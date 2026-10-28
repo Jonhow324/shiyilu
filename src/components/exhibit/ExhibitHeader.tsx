@@ -27,15 +27,16 @@ export default function ExhibitHeader({ summary, selectedTags, onToggleTag }: Pr
         <span>{summary.updatedOn ? `更新于 ${summary.updatedOn}` : "尚未收录"}</span>
       </div>
 
-      <div className="mt-12 grid grid-cols-1 items-end gap-x-8 gap-y-12 min-[1100px]:grid-cols-12">
+      <div className="mt-8 grid grid-cols-1 items-end gap-x-8 gap-y-12 md:mt-12 min-[1100px]:grid-cols-12">
         <div className="min-[1100px]:col-span-7">
-          <div className="relative">
-            <h1 className="font-serif-sc text-[clamp(5.5rem,9vw,10rem)] leading-[0.82] font-black tracking-[-0.045em]">
+          {/* 窄屏把标题和印章排成一行，印章跟在标题右边，不压字也不会溢出 */}
+          <div className="relative max-md:flex max-md:items-start">
+            <h1 className="font-serif-sc text-[clamp(5.5rem,9vw,10rem)] leading-[0.82] font-black tracking-[-0.045em] max-md:text-[clamp(3rem,16vw,4.25rem)]">
               拾遗录
             </h1>
             <div
               aria-hidden
-              className="absolute top-1 right-0 grid rotate-[8deg] grid-cols-2 gap-px border-2 border-seal p-1 text-seal min-[1100px]:top-2 min-[1100px]:right-6"
+              className="absolute top-1 right-0 grid rotate-[8deg] grid-cols-2 gap-px border-2 border-seal p-1 text-seal max-md:static max-md:mt-1 max-md:ml-3 max-md:shrink-0 max-md:scale-90 min-[1100px]:top-2 min-[1100px]:right-6"
             >
               {SEAL_CHARS.map((char) => (
                 <span
@@ -88,7 +89,7 @@ export default function ExhibitHeader({ summary, selectedTags, onToggleTag }: Pr
       </div>
 
       {summary.distribution.length > 0 ? (
-        <div className="mt-14">
+        <div className="mt-10 md:mt-14">
           <div className="flex items-baseline justify-between font-mono text-[10px] tracking-[0.2em] text-ink-soft uppercase">
             <span>标签分布</span>
             <span>点击色块筛选</span>
@@ -102,6 +103,7 @@ export default function ExhibitHeader({ summary, selectedTags, onToggleTag }: Pr
                   type="button"
                   onClick={() => onToggleTag(share.tag)}
                   aria-pressed={isSelected}
+                  aria-label={`筛选「${share.tag}」`}
                   title={`筛选「${share.tag}」`}
                   className="min-w-0 flex-1 text-left"
                   style={{ flexGrow: share.count, flexBasis: 0 }}
@@ -112,8 +114,9 @@ export default function ExhibitHeader({ summary, selectedTags, onToggleTag }: Pr
                     }`}
                     style={{ backgroundColor: tagColor(share.tag) }}
                   />
+                  {/* 窄屏色条只留颜色，不写标签与百分比 */}
                   <span
-                    className={`mt-2 block truncate text-center font-mono text-[10px] tracking-[0.08em] whitespace-nowrap ${
+                    className={`mt-2 block truncate text-center font-mono text-[10px] tracking-[0.08em] whitespace-nowrap max-md:hidden ${
                       isSelected ? "text-ink" : "text-ink-soft"
                     }`}
                   >

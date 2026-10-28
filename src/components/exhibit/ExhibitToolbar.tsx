@@ -36,7 +36,7 @@ export default function ExhibitToolbar({
   const selected = new Set(selectedTags.map((tag) => tag.toLowerCase()));
 
   return (
-    <div className="mt-12 border-y border-ink-line py-4">
+    <div className="mt-8 border-y border-ink-line py-4 md:mt-12">
       <div className="flex flex-wrap items-center gap-x-10 gap-y-4">
         <label className="flex items-center gap-3">
           <span className="font-mono text-[10px] tracking-[0.2em] text-ink-soft uppercase">
@@ -101,31 +101,34 @@ export default function ExhibitToolbar({
       </div>
 
       {tags.length > 0 ? (
-        <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
-          {tags.map((item) => {
-            const isSelected = selected.has(item.tag.toLowerCase());
-            return (
-              <button
-                key={item.tag}
-                type="button"
-                onClick={() => onToggleTag(item.tag)}
-                aria-pressed={isSelected}
-                className={`inline-flex items-center gap-2 border px-2.5 py-1 font-mono text-[10px] tracking-[0.12em] uppercase transition-colors ${
-                  isSelected
-                    ? "border-ink/40 bg-ink/[0.06] text-ink"
-                    : "border-transparent text-ink-soft hover:text-ink"
-                }`}
-              >
-                <span
-                  aria-hidden
-                  className="size-2 shrink-0 rounded-full"
-                  style={{ backgroundColor: tagColor(item.tag) }}
-                />
-                {item.tag}
-                <span className="text-ink/35">{item.count}</span>
-              </button>
-            );
-          })}
+        // 窄屏一行横着滑出去，不换行；宽屏照旧换行铺开
+        <div className="-mx-5 mt-4 overflow-x-auto px-5 [scrollbar-width:thin] md:mx-0 md:overflow-visible md:px-0">
+          <div className="flex w-max items-center gap-x-5 md:w-auto md:flex-wrap md:gap-y-2">
+            {tags.map((item) => {
+              const isSelected = selected.has(item.tag.toLowerCase());
+              return (
+                <button
+                  key={item.tag}
+                  type="button"
+                  onClick={() => onToggleTag(item.tag)}
+                  aria-pressed={isSelected}
+                  className={`inline-flex shrink-0 items-center gap-2 border px-2.5 py-1 font-mono text-[10px] tracking-[0.12em] uppercase transition-colors ${
+                    isSelected
+                      ? "border-ink/40 bg-ink/[0.06] text-ink"
+                      : "border-transparent text-ink-soft hover:text-ink"
+                  }`}
+                >
+                  <span
+                    aria-hidden
+                    className="size-2 shrink-0 rounded-full"
+                    style={{ backgroundColor: tagColor(item.tag) }}
+                  />
+                  {item.tag}
+                  <span className="text-ink/35">{item.count}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       ) : null}
     </div>

@@ -158,7 +158,7 @@ export default function ExhibitPage({
   }, []);
 
   return (
-    <main className="mx-auto w-full max-w-[2640px] px-10 pt-8 pb-24">
+    <main className="mx-auto w-full max-w-[2640px] px-5 pt-6 pb-16 md:px-10 md:pt-8 md:pb-24">
       <ExhibitHeader
         summary={summary}
         selectedTags={selectedTags}

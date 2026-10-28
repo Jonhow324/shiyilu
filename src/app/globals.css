@@ -209,3 +209,15 @@
     aspect-ratio: 4 / 3;
   }
 }
+
+/* 窄屏（小于 768）：陈列退成单列，卡片不再分宽窄 */
+@media (max-width: 767.98px) {
+  .exhibit-grid {
+    grid-template-columns: minmax(0, 1fr);
+    column-gap: 0;
+    row-gap: 3.25rem;
+  }
+  .exhibit-grid > :nth-child(n) .exhibit-cover {
+    aspect-ratio: 4 / 3;
+  }
+}
