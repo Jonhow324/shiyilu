@@ -1,6 +1,6 @@
 services:
   nav:
-    image: ${NAV_IMAGE:-ghcr.io/jonhow/shiyilu:latest}
+    image: ${NAV_IMAGE:-ghcr.io/jonhow324/shiyilu:latest}
     ports:
       - "21785:3000"
     environment:

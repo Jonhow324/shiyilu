@@ -143,7 +143,7 @@ docker compose up -d
 docker compose exec nav node --import tsx scripts/seed.ts   # 只在第一次
 ```
 
-`docker-compose.yml` 里的默认镜像名是 `ghcr.io/jonhow/shiyilu:latest`。仓库归属不同，就用 `NAV_IMAGE` 覆盖。
+`docker-compose.yml` 里的默认镜像名是 `ghcr.io/jonhow324/shiyilu:latest`。仓库归属不同，就用 `NAV_IMAGE` 覆盖。
 
 不用 Docker 时，直接跑 standalone：
 
