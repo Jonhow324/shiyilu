@@ -1,89 +1,63 @@
-# Nav — 个人导航站
+# Nav — 拾遗录
 
-一个只服务一个人的网址收藏站：存放在网上看到的好用工具、开源项目、有趣页面。
+一个只服务一个人的网址收藏。公开页叫「拾遗录」：纸色底、衬线标题、错位陈列和一张索引。
 
-- **公开只读**：任何人访问都能看书签列表
-- **写入需鉴权**：网页端编辑与 MCP 调用共用一把 token（`NAV_TOKEN`）
-- **MCP 接入**：AI 助手通过 MCP 协议代你添加书签
-- **扁平多标签**：唯一的组织维度是 Tag，没有分类树（见 `docs/adr/`）
+- **公开只读**。任何人都能看。
+- **写入要一把钥匙**。网页端和 MCP 共用 `NAV_TOKEN`。
+- **标签是唯一的组织方式**。一条 Bookmark 可以挂多个，没有分类树。
+- **封面在收录后存下来**。问 mShots，确认不是占位图才落盘。
+- **正文快照按需抓**。解锁后点「取快照」才抓，抽不出正文就没有入口。
 
-技术栈：Next.js 16（App Router） + TypeScript + React 19 + Tailwind CSS 4 + shadcn/ui（Radix UI 版） + lucide-react + tweakcn 主题 + SQLite（better-sqlite3）。
+技术栈：Next.js 16（App Router）+ TypeScript + React 19 + Tailwind CSS 4 + SQLite（better-sqlite3）。
 
-### UI 架构
+术语见 [`GLOSSARY.md`](GLOSSARY.md)。
 
-- **Tailwind v4**：没有 `tailwind.config.js`，主题变量写在 `src/app/globals.css`
-- **shadcn/ui**：`style: radix-nova`（Radix UI primitives）、base color `neutral`、CSS variables；
-  组件源码在 `src/components/ui/`，由 `npx shadcn@latest add ...` 生成，可安全重跑覆盖
-- **tweakcn 主题**：`globals.css` 里的 `:root` / `.dark` 用的是 tweakcn「Violet Dark」（石墨底 + 紫色点缀）
-- **lucide-react**：图标
-- **sonner**：toast 提示（401、保存成功、加载失败等）
+---
 
-公开页「拾遗录」走自己的一套：纸色底 `#f4f1ea`、墨色字 `#191712`、印章红 `#d23f1c`，
-字体是 Noto Serif SC（中文标题）、Instrument Serif（英文斜体与大数字）、JetBrains Mono（小标签），
-**不跟随系统暗色**。上面的 shadcn 主题变量只留给后续的编辑界面用。
+## 页面
 
-已安装的 shadcn 组件：`sidebar` `sheet` `card` `badge` `input` `textarea` `button` `dialog` `sonner`
-（连带生成 `separator` `tooltip` `skeleton` 与 `src/hooks/use-mobile.ts`）。
+公开页有两种看法，记在地址栏里。
 
-```bash
-# 需要新增组件时
-npx shadcn@latest add <component>
-```
+- **陈列**是默认。宽屏按稿子的节奏错位拼贴，768px 以下改成单列。
+- **索引**是同一批 Bookmark 的表。宽屏五列：编号、名称、简介、标签、访问。窄屏是编号、名称、换行的简介和域名。
+
+检索匹配标题、简介和网址，按 `/` 聚焦。标签可多选，语义是同时具备。排序只有最近收录和最早收录。筛选、检索、看法和排序都写在 URL 里。
+
+编号是 Bookmark 的 id，补零到三位。收录日是 `created_at`。页眉的「更新于」和「某年新增」都取最近一条收录日。
+
+封面还没抓到时，卡片显示「显影中」，过几秒再问一次。快照文件存在时，标题旁出现「快照」。
+
+访客看不到写入。页脚「编辑」输入 Read Token，只存在这台浏览器。解锁后才有「新收录」「改」「删」「取快照」。
+
+页面不跟随系统暗色。纸色 `#f4f1ea`，墨色 `#191712`，印章红 `#d23f1c`。中文标题用 Noto Serif SC，英文和数字用 Instrument Serif，小字用 JetBrains Mono。
 
 ---
 
 ## 快速开始
 
 ```bash
-# 1. 安装依赖
 npm install
-
-# 2. 配置环境变量
 cp .env.example .env
-# 生成一个 token 填进 NAV_TOKEN
-node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"
-
-# 3. 灌入示例数据（可重复执行）
-npm run seed
-
-# 4. 开发
-npm run dev          # http://localhost:3000
+node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"  # 填进 NAV_TOKEN
+npm run seed     # 灌入拾遗录的 22 条，可重复执行
+npm run dev      # http://localhost:3000
 ```
 
-### Docker
-
-数据、封面和快照都在卷 `nav-data` 里，重建容器不会丢。`.env` 里要有 `NAV_TOKEN`。
-
-```bash
-docker compose up -d --build
-docker compose exec nav node --import tsx scripts/seed.ts   # 第一次灌入 22 条
-```
-
-宿主机端口是 21785。MCP 地址是 `http://<主机>:21785/api/mcp`，请求头带 `Authorization: Bearer <NAV_TOKEN>`。
+`npm run seed` 会删掉最早那 8 条示例（GitHub、Vite 等），不删你后来自己加的。空库时编号从 1 开始，Figma 是 `No.001`，tldraw 是 `No.022`。
 
 ### npm scripts
 
 | 脚本 | 作用 |
 | --- | --- |
 | `npm run dev` | 开发服务器 |
-| `npm run build` | 生产构建，产出 standalone 产物并自动补齐静态资源 |
-| `npm start` | 以 standalone 产物启动（需先 build） |
+| `npm run build` | 生产构建，产出 standalone 并补齐静态资源 |
+| `npm start` | 用 standalone 产物启动，需先 build |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | `tsc --noEmit` |
-| `npm test` | `tsx --test src/lib/*.test.ts`（node:test，临时数据库，不动 `data/nav.db`） |
-| `npm run seed` | 写入种子书签，可重复执行 |
+| `npm test` | node:test。临时库，不碰 `data/nav.db` |
+| `npm run seed` | 写入 22 条种子 |
 
-### 测试
-
-用 `node:test` + `tsx`，不引入 jest / vitest：
-
-```bash
-npm test        # 等价于 tsx --test src/lib/*.test.ts
-```
-
-脚本写成 `src/lib/*.test.ts` 而不是 `src/**/*.test.ts`：npm 用 `sh` 执行脚本，`**` 不会展开。
-测试在 `beforeEach` 里新建临时数据库并把 `NAV_DB_PATH` 指过去，同时清掉 `globalThis.__navDb`
-的连接缓存，所以不会读写仓库里的 `data/nav.db`。
+测试用 `node:test` + `tsx`，不引入 jest 或 vitest。每个用例都换一个临时数据库，并清掉 `globalThis.__navDb` 的连接缓存。脚本写成 `src/lib/*.test.ts`，因为 npm 用 `sh` 执行，`**` 不会展开。
 
 ---
 
@@ -91,10 +65,11 @@ npm test        # 等价于 tsx --test src/lib/*.test.ts
 
 | 变量 | 必填 | 默认 | 说明 |
 | --- | --- | --- | --- |
-| `NAV_TOKEN` | 否 | 无 | read token。网页端编辑与 MCP 写工具共用。**未设置时读取照常，所有写操作返回 401** |
-| `NAV_DB_PATH` | 否 | `<项目根>/data/nav.db` | SQLite 文件路径。以 standalone 方式启动时 server.js 会 chdir 到 `.next/standalone`，代码会自动回退到项目根 |
+| `NAV_TOKEN` | 否 | 无 | 网页写入和 MCP 写入共用。未设置时读取照常，所有写入返回 401 |
+| `NAV_DB_PATH` | 否 | `<项目根>/data/nav.db` | SQLite 文件。standalone 启动会换工作目录，代码会把数据放回项目根 |
+| `NAV_ARCHIVE_DIR` | 否 | 数据库所在目录 | 封面在 `covers/`，快照在 `snapshots/` |
 
-> 读取完全公开是刻意接受的（ADR-0003）：导航站内容无敏感信息。
+读取公开是刻意的，见 ADR-0003。封面和快照不进数据库，也不进 git，`data/` 已被忽略。
 
 ---
 
@@ -102,126 +77,77 @@ npm test        # 等价于 tsx --test src/lib/*.test.ts
 
 | 方法 | 路径 | 鉴权 | 说明 |
 | --- | --- | --- | --- |
-| `GET` | `/api/bookmarks` | 公开 | 查询参数 `?q=关键字&tags=a,b`（tags 为 AND 语义） |
-| `POST` | `/api/bookmarks` | Bearer | body `{ title, url, description?, tags? }`，成功 201 |
+| `GET` | `/api/bookmarks` | 公开 | `?q=` 匹配标题、简介、网址；`?tags=a,b` 是同时具备；`?order=newest\|oldest` |
+| `POST` | `/api/bookmarks` | Bearer | `{ title, url, description?, tags? }`，成功 201。随后后台取封面 |
 | `GET` | `/api/bookmarks/[id]` | 公开 | 单条 |
-| `PATCH` | `/api/bookmarks/[id]` | Bearer | 局部更新，只传要改的字段 |
-| `DELETE` | `/api/bookmarks/[id]` | Bearer | 删除 |
+| `PATCH` | `/api/bookmarks/[id]` | Bearer | 局部更新。网址变了才重新取封面，并丢掉旧快照 |
+| `DELETE` | `/api/bookmarks/[id]` | Bearer | 删除，连同封面和快照 |
+| `POST` | `/api/bookmarks/[id]/snapshot` | Bearer | 开工抓正文，立刻 202，不等抓完 |
+| `GET` | `/api/snapshot/[id]` | 公开 | 有快照就返回那一页 HTML，没有就 404 |
 | `GET` | `/api/tags` | 公开 | `[{ tag, count }]` |
-| `GET` | `/api/cover?url=` | 公开 | 代取封面截图（只接受 http/https）。取不到返回 `404 {"error":"显影中"}`，图片缓存一天 |
-| `POST` | `/api/mcp` | 见下 | MCP Streamable HTTP 端点 |
+| `GET` | `/api/cover?url=` | 公开 | 有封面文件就返回图片。没有就后台去取，这次返回 `404 {"error":"显影中"}` |
+| `POST` | `/api/mcp` | 见下 | MCP Streamable HTTP |
 
-鉴权方式：`Authorization: Bearer <NAV_TOKEN>`。不匹配返回 `401` + `{"error":"unauthorized"}`。
+鉴权是 `Authorization: Bearer <NAV_TOKEN>`。不匹配返回 `401 {"error":"unauthorized"}`。
 
-```bash
-curl http://localhost:3000/api/bookmarks?q=前端
-curl -X POST http://localhost:3000/api/bookmarks \
-  -H "Authorization: Bearer $NAV_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"title":"MDN","url":"https://developer.mozilla.org","tags":["文档","前端"]}'
-```
+封面响应里不会出现 mShots 的地址。小于 8KB 或不是图片的响应当成占位图，隔几秒再问，最多四次。
 
 ---
 
-## MCP 接入
+## MCP
 
-端点：`http://<host>:3000/api/mcp`（Streamable HTTP，无状态模式：每个请求独立建 transport，不保存 session）。
+端点：`http://<主机>:21785/api/mcp`。Streamable HTTP，无状态，每个请求独立处理。本地开发时把端口换成 3000。
 
-### 工具
+| 工具 | 鉴权 | 说明 |
+| --- | --- | --- |
+| `list_bookmarks` | 公开 | 按关键字和标签查。标签是同时具备 |
+| `add_bookmark` | Bearer | 新增。`title`、`url` 必填，网址唯一。会触发封面抓取 |
+| `update_bookmark` | Bearer | 只传要改的字段。`tags` 传了就整体替换 |
+| `delete_bookmark` | Bearer | 删除，不可撤销 |
 
-| 工具 | 鉴权 | 参数 | 说明 |
-| --- | --- | --- | --- |
-| `list_bookmarks` | 公开 | `query?`, `tags?`（AND 语义） | 查询书签，助手应先查再添加 |
-| `add_bookmark` | 需 token | `title`, `url`, `description?`, `tags?` | 新增，url 唯一 |
-| `update_bookmark` | 需 token | `id`, `title?`, `url?`, `description?`, `tags?` | 局部更新，`tags` 传了就整体替换 |
-| `delete_bookmark` | 需 token | `id` | 删除 |
+没有「取快照」这个工具。快照只在网页上点。
 
-工具描述是写给 AI 看的，写明了「什么时候该用」。错误以 `isError: true` 返回，不抛异常。
-
-### 客户端配置
-
-**Claude Desktop**（`claude_desktop_config.json`）
+钥匙放在请求头，不放在 URL 里：
 
 ```json
 {
   "mcpServers": {
     "nav": {
       "type": "http",
-      "url": "http://localhost:3000/api/mcp",
-      "headers": {
-        "Authorization": "Bearer <NAV_TOKEN>"
-      }
+      "url": "http://<主机>:21785/api/mcp",
+      "headers": { "Authorization": "Bearer <NAV_TOKEN>" }
     }
   }
 }
 ```
 
-**Cursor**（项目内 `.cursor/mcp.json` 或全局 `~/.cursor/mcp.json`）
-
-```json
-{
-  "mcpServers": {
-    "nav": {
-      "type": "http",
-      "url": "http://localhost:3000/api/mcp",
-      "headers": {
-        "Authorization": "Bearer <NAV_TOKEN>"
-      }
-    }
-  }
-}
-```
-
-**Claude Code**
+Claude Code：
 
 ```bash
-claude mcp add --transport http nav http://localhost:3000/api/mcp \
+claude mcp add --transport http nav http://<主机>:21785/api/mcp \
   --header "Authorization: Bearer <NAV_TOKEN>"
 ```
 
-> 远端部署时把 `http://localhost:3000` 换成实际地址；token 要和服务端 `NAV_TOKEN` 一致。
-> 客户端通常也支持省略 `type` 只写 `url` + `headers`。
-
 ---
 
-## 部署（standalone 单进程）
+## 部署
 
-`next.config.ts` 里设了 `output: 'standalone'`，构建产物是自包含的 `server.js` + 运行期依赖（含 better-sqlite3 原生模块），不需要外部 `node_modules`。
+镜像在要跑的那台机器上构建，不推到镜像仓库。宿主机的 21785 映射到容器里的 3000。数据库、封面、快照都在卷 `nav-data` 里，重建容器不会丢。
+
+```bash
+cp .env.example .env          # 填 NAV_TOKEN
+docker compose up -d --build
+docker compose exec nav node --import tsx scripts/seed.ts   # 只在第一次
+```
+
+不用 Docker 时，直接跑 standalone：
 
 ```bash
 npm run build
-# 产物：.next/standalone（内含 node_modules；prepare-standalone 已把 .next/static 拷进去）
-
-HOSTNAME=0.0.0.0 PORT=3000 NAV_TOKEN=<你的 token> node .next/standalone/server.js
-# 等价于：npm start
+HOSTNAME=0.0.0.0 PORT=21785 NAV_TOKEN=<token> node .next/standalone/server.js
 ```
 
-要点：
-
-- **不要用 `next start`**：与 `output: 'standalone'` 不兼容（Next 会打印警告），请直接 `node .next/standalone/server.js`。
-- 监听地址取自 `process.env.HOSTNAME`，缺省 `0.0.0.0`；端口取自 `PORT`，缺省 3000。
-- 数据库默认落在**项目根目录**下的 `data/nav.db`。standalone 的 `server.js` 会 `chdir` 到 `.next/standalone`，`src/lib/db.ts` 里做了回退，数据仍然写到项目根（不会随构建被清掉）。想放到别处就显式设 `NAV_DB_PATH`（例如 `/var/lib/nav/nav.db`）。
-- 备份 = 复制一个文件：`data/nav.db`。
-
-systemd 示例：
-
-```ini
-[Unit]
-Description=nav
-After=network.target
-
-[Service]
-WorkingDirectory=/srv/nav
-Environment=NAV_TOKEN=xxxx
-Environment=NAV_DB_PATH=/srv/nav/data/nav.db
-Environment=PORT=3000
-Environment=HOSTNAME=0.0.0.0
-ExecStart=/usr/bin/node /srv/nav/.next/standalone/server.js
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-```
+不要用 `next start`，它和 `output: 'standalone'` 不匹配。
 
 ---
 
@@ -230,41 +156,25 @@ WantedBy=multi-user.target
 ```
 src/
 ├── app/
-│   ├── api/
-│   │   ├── bookmarks/route.ts          GET（公开）/ POST（鉴权）
-│   │   ├── bookmarks/[id]/route.ts     GET（公开）/ PATCH、DELETE（鉴权）
-│   │   ├── tags/route.ts               GET（公开）
-│   │   └── mcp/route.ts                MCP Streamable HTTP（无状态）
-│   ├── layout.tsx
-│   ├── page.tsx                        Server Component 读库直出首页
-│   └── globals.css
-├── components/
-│   ├── NavApp.tsx                      客户端主界面（状态与请求编排）
-│   ├── Sidebar.tsx                     左侧栏：搜索 + 标签过滤（shadcn Sidebar）
-│   ├── BookmarkCard.tsx                卡片：favicon / 标题 / 描述 / 标签（shadcn Card + Badge）
-│   ├── BookmarkDrawer.tsx              右侧滑出抽屉：新增 / 编辑（shadcn Sheet）
-│   ├── Favicon.tsx                     favicon 多源降级
-│   ├── TokenDialog.tsx                 填写 read token（shadcn Dialog）
-│   ├── theme-provider.tsx              next-themes 包装（暗色模式）
-│   └── ui/                             shadcn 生成的基础组件
-├── hooks/
-│   └── use-mobile.ts                   移动端断点（shadcn 生成，已改为 useSyncExternalStore）
+│   ├── api/bookmarks/        列表、单条、快照开工
+│   ├── api/cover/            封面
+│   ├── api/snapshot/[id]/    正文快照
+│   ├── api/mcp/              MCP
+│   └── page.tsx              按地址栏筛完再渲染
+├── components/exhibit/       拾遗录的页眉、陈列、索引、解锁和编辑
 └── lib/
-    ├── db.ts                           better-sqlite3 单例、建表、目录自动创建
-    ├── bookmarks.ts                    数据操作 + 入参校验
-    ├── auth.ts                         Bearer token 校验（REST 与 MCP 共用）
-    ├── token-store.ts                  浏览器端 token 外部 store
-    ├── http.ts                         错误响应映射
-    └── seed.ts                         示例数据
-scripts/
-├── seed.ts                             npm run seed 入口
-└── prepare-standalone.mjs              补全 standalone 静态资源
-docs/adr/                               架构决策记录
+    ├── bookmarks.ts          查询、写入；写入后调度抓取
+    ├── capture.ts            封面和快照的后台抓取
+    ├── archive.ts            data/covers 与 data/snapshots
+    ├── catalog.ts            编号、页眉计数、标签分布
+    └── cover.ts              /api/cover 的请求处理
+data/                         不进 git：nav.db、covers/、snapshots/
+docs/adr/                     架构决定
 ```
 
 ---
 
-## 数据模型
+## 数据
 
 ```sql
 CREATE TABLE bookmarks (
@@ -272,25 +182,21 @@ CREATE TABLE bookmarks (
   title TEXT NOT NULL,
   url TEXT NOT NULL UNIQUE,
   description TEXT NOT NULL DEFAULT '',
-  tags TEXT NOT NULL DEFAULT '[]',   -- JSON 字符串数组
+  tags TEXT NOT NULL DEFAULT '[]',
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 ```
 
-搜索用 `LOWER(title) LIKE ? OR LOWER(description) LIKE ?`（不用 FTS5：中文分词不可靠）；
-标签过滤用 `json_each(tags)`，多个标签为 **AND** 语义（选得越多结果越少）。
+检索是 `LOWER(title)`、`LOWER(description)`、`LOWER(url)` 的模糊匹配。标签过滤用 `json_each`，多个标签是同时具备。列表默认按 `created_at` 倒序。
 
-favicon 由前端实时加载，依次尝试 Google s2 → icon.horse → 站点 `/favicon.ico`，全失败降级为标题首字占位方块；不入库、不做服务端抓取。
+封面和快照不是表里的列。列表返回的 `snapshot` 只表示 `data/snapshots/<id>.html` 在不在。
 
 ---
 
-## 设计决策
-
-见 [`docs/adr/`](docs/adr/)：
+## 决定
 
 - [0001 SQLite 作为唯一存储](docs/adr/0001-sqlite-as-primary-store.md)
-- [0002 MCP 以 Streamable HTTP 内建于 Next.js 进程](docs/adr/0002-mcp-streamable-http-in-nextjs.md)
-- [0003 用单一 Token 做写入鉴权，不建用户体系](docs/adr/0003-token-based-write-auth.md)
-
-术语见 [`GLOSSARY.md`](GLOSSARY.md)。
+- [0002 MCP 以 Streamable HTTP 内建于 Next.js](docs/adr/0002-mcp-streamable-http-in-nextjs.md)
+- [0003 一把 Token 做写入鉴权](docs/adr/0003-token-based-write-auth.md)
+- [0004 封面和快照以文件留存](docs/adr/0004-covers-fetched-not-stored.md)
