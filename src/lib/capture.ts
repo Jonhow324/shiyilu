@@ -180,25 +180,32 @@ export async function captureSnapshot(
   );
 }
 
-/**
- * 封面和快照一起抓。已有的文件跳过。
- * 调用方不等它：失败留在这里，不冒泡。
- */
+/** 收录后只抓封面。快照要等人点了「取快照」才抓。 */
 export function scheduleCapture(id: number): void {
-  if (inFlight.has(id)) return;
-  if (hasCover(id) && hasSnapshot(id)) return;
+  if (inFlight.has(id) || hasCover(id)) return;
 
   inFlight.add(id);
   void (async () => {
     try {
-      if (!hasCover(id)) await captureCover(id);
+      await captureCover(id);
     } catch {
-      // 封面失败不影响快照
+      // 封面失败就留着「显影中」
+    } finally {
+      inFlight.delete(id);
     }
+  })();
+}
+
+/** 按需抓正文。已有快照就不重抓。 */
+export function scheduleSnapshot(id: number): void {
+  if (inFlight.has(id) || hasSnapshot(id)) return;
+
+  inFlight.add(id);
+  void (async () => {
     try {
-      if (!hasSnapshot(id)) await captureSnapshot(id);
+      await captureSnapshot(id);
     } catch {
-      // 快照失败不影响封面
+      // 抓不到就不写文件
     } finally {
       inFlight.delete(id);
     }

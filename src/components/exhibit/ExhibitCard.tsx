@@ -15,6 +15,7 @@ interface Props {
   canWrite: boolean;
   onEdit: (bookmark: Bookmark) => void;
   onDelete: (bookmark: Bookmark) => void;
+  onSnapshot: (bookmark: Bookmark) => void;
 }
 
 /** 陈列里的一张卡：封面、角标编号、域名与收录日、标题、描述、标签 */
@@ -24,6 +25,7 @@ export default function ExhibitCard({
   canWrite,
   onEdit,
   onDelete,
+  onSnapshot,
 }: Props) {
   const host = hostOf(bookmark.url);
 
@@ -96,6 +98,7 @@ export default function ExhibitCard({
               className="ml-auto"
               onEdit={() => onEdit(bookmark)}
               onDelete={() => onDelete(bookmark)}
+              onSnapshot={bookmark.snapshot ? undefined : () => onSnapshot(bookmark)}
             />
           ) : null}
         </div>

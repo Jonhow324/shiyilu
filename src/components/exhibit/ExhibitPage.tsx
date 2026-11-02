@@ -228,6 +228,14 @@ export default function ExhibitPage({
     setLayer({ kind: "form", bookmark });
   }
 
+  /** 只开工，不等抓完。抽不出正文时刷新后仍没有「快照」。 */
+  async function handleSnapshot(bookmark: Bookmark) {
+    const result = await write(`/api/bookmarks/${bookmark.id}/snapshot`, { method: "POST" });
+    if (!result.ok) return;
+    setNotice("正在取快照，稍后再刷新。");
+    window.setTimeout(() => router.refresh(), 4000);
+  }
+
   function handleCreate() {
     setNotice(null);
     setLayer({ kind: "form", bookmark: null });
@@ -349,6 +357,7 @@ export default function ExhibitPage({
           canWrite={canWrite}
           onEdit={handleEdit}
           onDelete={(bookmark) => void handleDelete(bookmark)}
+          onSnapshot={(bookmark) => void handleSnapshot(bookmark)}
         />
       ) : (
         <>
@@ -366,6 +375,7 @@ export default function ExhibitPage({
                 canWrite={canWrite}
                 onEdit={handleEdit}
                 onDelete={(target) => void handleDelete(target)}
+                onSnapshot={(target) => void handleSnapshot(target)}
               />
             ))}
           </div>

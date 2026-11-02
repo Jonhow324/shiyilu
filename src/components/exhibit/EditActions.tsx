@@ -5,6 +5,8 @@ import { useState, type MouseEvent } from "react";
 interface Props {
   onEdit: () => void;
   onDelete: () => void;
+  /** 已有快照时不显示。点了只是开工，抓没抓到要刷新才知道。 */
+  onSnapshot?: () => void;
   className?: string;
 }
 
@@ -15,7 +17,7 @@ interface Props {
  * 仍然做一次 preventDefault + stopPropagation，点它们不会打开外链、也不会触发行的其它行为。
  * 「删」就地变成一个确认行，不用 window.confirm。
  */
-export default function EditActions({ onEdit, onDelete, className = "" }: Props) {
+export default function EditActions({ onEdit, onDelete, onSnapshot, className = "" }: Props) {
   const [confirming, setConfirming] = useState(false);
 
   function guard(event: MouseEvent<HTMLButtonElement>) {
@@ -53,6 +55,18 @@ export default function EditActions({ onEdit, onDelete, className = "" }: Props)
         </>
       ) : (
         <>
+          {onSnapshot ? (
+            <button
+              type="button"
+              onClick={(event) => {
+                guard(event);
+                onSnapshot();
+              }}
+              className="text-ink-soft transition-colors hover:text-ink"
+            >
+              取快照
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={(event) => {

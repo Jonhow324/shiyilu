@@ -14,6 +14,7 @@ interface Props {
   canWrite: boolean;
   onEdit: (bookmark: Bookmark) => void;
   onDelete: (bookmark: Bookmark) => void;
+  onSnapshot: (bookmark: Bookmark) => void;
 }
 
 /**
@@ -30,6 +31,7 @@ export default function ExhibitIndex({
   canWrite,
   onEdit,
   onDelete,
+  onSnapshot,
 }: Props) {
   return (
     <>
@@ -68,6 +70,7 @@ export default function ExhibitIndex({
                           <EditActions
                             onEdit={() => onEdit(bookmark)}
                             onDelete={() => onDelete(bookmark)}
+                            onSnapshot={bookmark.snapshot ? undefined : () => onSnapshot(bookmark)}
                           />
                         ) : null}
                         <span aria-hidden className="text-ink-soft">
@@ -186,6 +189,7 @@ export default function ExhibitIndex({
                     <EditActions
                       onEdit={() => onEdit(bookmark)}
                       onDelete={() => onDelete(bookmark)}
+                      onSnapshot={bookmark.snapshot ? undefined : () => onSnapshot(bookmark)}
                     />
                   ) : null}
                   <span
