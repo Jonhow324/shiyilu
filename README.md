@@ -50,6 +50,17 @@ npm run seed
 npm run dev          # http://localhost:3000
 ```
 
+### Docker
+
+数据、封面和快照都在卷 `nav-data` 里，重建容器不会丢。`.env` 里要有 `NAV_TOKEN`。
+
+```bash
+docker compose up -d --build
+docker compose exec nav node --import tsx scripts/seed.ts   # 第一次灌入 22 条
+```
+
+宿主机端口是 21785。MCP 地址是 `http://<主机>:21785/api/mcp`，请求头带 `Authorization: Bearer <NAV_TOKEN>`。
+
 ### npm scripts
 
 | 脚本 | 作用 |

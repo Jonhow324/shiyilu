@@ -1,0 +1,15 @@
+services:
+  nav:
+    build: .
+    ports:
+      - "21785:3000"
+    environment:
+      NAV_TOKEN: ${NAV_TOKEN:?set NAV_TOKEN in .env}
+      NAV_DB_PATH: /data/nav.db
+      NAV_ARCHIVE_DIR: /data
+    volumes:
+      - nav-data:/data
+    restart: unless-stopped
+
+volumes:
+  nav-data:
