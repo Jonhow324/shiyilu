@@ -1,6 +1,6 @@
 services:
   nav:
-    build: .
+    image: ${NAV_IMAGE:-ghcr.io/jonhow/nav:latest}
     ports:
       - "21785:3000"
     environment:

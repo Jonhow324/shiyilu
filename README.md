@@ -132,13 +132,18 @@ claude mcp add --transport http nav http://<主机>:21785/api/mcp \
 
 ## 部署
 
-镜像在要跑的那台机器上构建，不推到镜像仓库。宿主机的 21785 映射到容器里的 3000。数据库、封面、快照都在卷 `nav-data` 里，重建容器不会丢。
+镜像由 GitHub Actions 在推到 `main` 时构建，放在 `ghcr.io/<owner>/nav:latest`。部署机只拉取，不自己构建。宿主机的 21785 映射到容器里的 3000。数据库、封面、快照都在卷 `nav-data` 里，重建容器不会丢。
+
+仓库要公开，或者在部署机上先 `docker login ghcr.io`。私有仓库的镜像默认也是私有的。
 
 ```bash
-cp .env.example .env          # 填 NAV_TOKEN
-docker compose up -d --build
+# .env 里写 NAV_TOKEN，以及 NAV_IMAGE=ghcr.io/<owner>/nav:latest
+docker compose pull
+docker compose up -d
 docker compose exec nav node --import tsx scripts/seed.ts   # 只在第一次
 ```
+
+`docker-compose.yml` 里的默认镜像名是 `ghcr.io/jonhow/nav:latest`。GitHub 仓库名或归属不同，就用 `NAV_IMAGE` 覆盖。
 
 不用 Docker 时，直接跑 standalone：
 
