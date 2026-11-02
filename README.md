@@ -68,6 +68,7 @@ npm run dev      # http://localhost:3000
 | `NAV_TOKEN` | 否 | 无 | 网页写入和 MCP 写入共用。未设置时读取照常，所有写入返回 401 |
 | `NAV_DB_PATH` | 否 | `<项目根>/data/nav.db` | SQLite 文件。standalone 启动会换工作目录，代码会把数据放回项目根 |
 | `NAV_ARCHIVE_DIR` | 否 | 数据库所在目录 | 封面在 `covers/`，快照在 `snapshots/` |
+| `HTTPS_PROXY` | 否 | 无 | 服务器取封面和快照时走的代理。留空则直连。不改变访客能不能打开那个网站 |
 
 读取公开是刻意的，见 ADR-0003。封面和快照不进数据库，也不进 git，`data/` 已被忽略。
 

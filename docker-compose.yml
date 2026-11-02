@@ -7,6 +7,10 @@ services:
       NAV_TOKEN: ${NAV_TOKEN:?set NAV_TOKEN in .env}
       NAV_DB_PATH: /data/nav.db
       NAV_ARCHIVE_DIR: /data
+      # 只影响服务器自己去取封面和快照。留空就是直连。
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
+      HTTP_PROXY: ${HTTP_PROXY:-}
+      NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1}
     volumes:
       - nav-data:/data
     restart: unless-stopped

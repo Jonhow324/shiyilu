@@ -20,6 +20,8 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
+# Node 22 的 fetch 默认不读 HTTPS_PROXY。打开后，封面和快照的出站请求才走代理。
+ENV NODE_USE_ENV_PROXY=1
 # 数据、封面、快照都落在这一层，外面用卷挂住
 ENV NAV_DB_PATH=/data/nav.db
 ENV NAV_ARCHIVE_DIR=/data
