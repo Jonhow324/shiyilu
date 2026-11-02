@@ -5,6 +5,7 @@ import type { Bookmark } from "@/lib/bookmarks";
 import { padNo } from "@/lib/catalog";
 import { tagColor } from "@/lib/tag-color";
 import EditActions from "./EditActions";
+import SnapshotLink from "./SnapshotLink";
 
 interface Props {
   bookmarks: Bookmark[];
@@ -58,8 +59,9 @@ export default function ExhibitIndex({
 
                   <div className="min-w-0">
                     <div className="flex items-start justify-between gap-3">
-                      <h3 className="font-serif-sc text-[1.2rem] leading-snug font-black tracking-tight">
+                      <h3 className="flex items-baseline gap-2 font-serif-sc text-[1.2rem] leading-snug font-black tracking-tight">
                         {bookmark.title}
+                        {bookmark.snapshot ? <SnapshotLink id={bookmark.id} /> : null}
                       </h3>
                       <div className="flex shrink-0 items-center gap-3">
                         {canWrite ? (
@@ -142,8 +144,11 @@ export default function ExhibitIndex({
                   >
                     <span className="sr-only">打开 {bookmark.title}</span>
                   </a>
-                  <span className="truncate font-serif-sc text-[1.3rem] leading-tight font-black tracking-tight transition-colors group-hover:text-seal">
-                    {bookmark.title}
+                  <span className="flex items-baseline gap-2">
+                    <span className="truncate font-serif-sc text-[1.3rem] leading-tight font-black tracking-tight transition-colors group-hover:text-seal">
+                      {bookmark.title}
+                    </span>
+                    {bookmark.snapshot ? <SnapshotLink id={bookmark.id} /> : null}
                   </span>
                 </div>
 

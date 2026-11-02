@@ -5,6 +5,7 @@ import type { Bookmark } from "@/lib/bookmarks";
 import { formatCollectedOn, padNo } from "@/lib/catalog";
 import { tagColor } from "@/lib/tag-color";
 import Cover from "./Cover";
+import SnapshotLink from "./SnapshotLink";
 import EditActions from "./EditActions";
 
 interface Props {
@@ -52,7 +53,7 @@ export default function ExhibitCard({
         </span>
       </div>
 
-      <h2 className="mt-4 font-serif-sc text-[clamp(1.4rem,1.5vw,1.95rem)] leading-snug font-black tracking-tight">
+      <h2 className="mt-4 flex items-baseline gap-3 font-serif-sc text-[clamp(1.4rem,1.5vw,1.95rem)] leading-snug font-black tracking-tight">
         <a
           href={bookmark.url}
           target="_blank"
@@ -61,6 +62,7 @@ export default function ExhibitCard({
         >
           {bookmark.title}
         </a>
+        {bookmark.snapshot ? <SnapshotLink id={bookmark.id} /> : null}
       </h2>
 
       {bookmark.description ? (

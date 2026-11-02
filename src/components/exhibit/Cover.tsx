@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { hostOf } from "@/components/Favicon";
 
 interface Props {
@@ -14,9 +15,14 @@ interface Props {
  * 加载中或失败时露出来的就是「显影中」。这样不会遇到缓存图 onLoad 不触发、
  * 或者 SSR 与客户端状态不一致的问题。
  */
+const RETRY_LIMIT = 6;
+const RETRY_MS = 5000;
+
 export default function Cover({ url, title }: Props) {
   const host = hostOf(url);
   const initial = (host || title).trim().slice(0, 1).toUpperCase() || "·";
+  const [attempt, setAttempt] = useState({ url, n: 0 });
+  const shown = attempt.url === url ? attempt.n : 0;
 
   return (
     <div className="exhibit-cover relative w-full overflow-hidden bg-[#e8e3d6]">
@@ -36,7 +42,7 @@ export default function Cover({ url, title }: Props) {
 
       {/* eslint-disable-next-line @next/next/no-img-element -- 截图由 /api/cover 代理，不走 next/image */}
       <img
-        src={`/api/cover?url=${encodeURIComponent(url)}`}
+        src={`/api/cover?url=${encodeURIComponent(url)}&t=${shown}`}
         alt=""
         loading="lazy"
         onLoad={(event) => {
@@ -45,6 +51,9 @@ export default function Cover({ url, title }: Props) {
         }}
         onError={(event) => {
           event.currentTarget.style.opacity = "0";
+          // 后台还在抓。隔几秒再问一次，问够了就停在「显影中」。
+          if (shown >= RETRY_LIMIT) return;
+          window.setTimeout(() => setAttempt({ url, n: shown + 1 }), RETRY_MS);
         }}
         className="absolute inset-0 h-full w-full object-cover opacity-0"
       />

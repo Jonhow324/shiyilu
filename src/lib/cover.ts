@@ -1,15 +1,15 @@
+import { getDb } from "./db";
+import { readCover } from "./archive";
+import { scheduleCapture } from "./capture";
+
 /**
- * 封面代理：浏览器只找自己的 /api/cover，服务端再去截图服务取图（见 ADR-0004）。
+ * 封面：浏览器只找自己的 /api/cover。
  *
- * 取不到不是错误，是「显影中」——所有失败都收敛成 404 + 一句话，调用方据此显示占位。
- * 这里不打印、不回显上游地址，响应体里也不会出现截图服务的域名。
+ * 文件在 data/covers。有就直接给；没有就让后台去抓，这次请求立刻返回「显影中」，
+ * 不等 mShots。上游地址不会出现在响应里。
  */
 
-/** 上游截图服务的宽度参数 */
 const COVER_WIDTH = 1200;
-
-/** 上游超时：超过就当作取不到 */
-export const COVER_TIMEOUT_MS = 8000;
 
 export type CoverTarget =
   | { ok: true; url: string }
@@ -33,67 +33,41 @@ export function parseCoverTarget(raw: string | null | undefined): CoverTarget {
   return { ok: true, url: value };
 }
 
-/** 拼上游取图地址：目标网址整段编码，w 固定 1200 */
+/** 拼上游取图地址。只在服务器抓取时用，不回给浏览器。 */
 export function coverUpstreamUrl(target: string): string {
   return `https://s.wordpress.com/mshots/v1/${encodeURIComponent(target)}?w=${COVER_WIDTH}`;
 }
 
-export type CoverImage =
-  | { ok: true; body: ArrayBuffer; contentType: string }
-  | { ok: false };
-
-/**
- * 取一张封面。
- * 上游非 2xx、超时、抛错、返回非图片、空响应，一律 ok: false。
- */
-export async function loadCover(
-  target: string,
-  fetchImpl: typeof fetch = fetch,
-  timeoutMs: number = COVER_TIMEOUT_MS,
-): Promise<CoverImage> {
-  try {
-    const response = await fetchImpl(coverUpstreamUrl(target), {
-      signal: AbortSignal.timeout(timeoutMs),
-      cache: "no-store",
-    });
-
-    if (!response.ok) return { ok: false };
-
-    // 上游的 Content-Type 可能带 charset；没有就按 jpeg 处理
-    const contentType = (response.headers.get("content-type") ?? "")
-      .split(";")[0]
-      .trim()
-      .toLowerCase();
-    if (contentType && !contentType.startsWith("image/")) return { ok: false };
-
-    const body = await response.arrayBuffer();
-    if (body.byteLength === 0) return { ok: false };
-
-    return { ok: true, body, contentType: contentType || "image/jpeg" };
-  } catch {
-    // 超时、网络错误、读到一半断开，都算取不到
-    return { ok: false };
-  }
+function developing(): Response {
+  return Response.json({ error: "显影中" }, { status: 404 });
 }
 
-/** GET /api/cover 的全部逻辑；路由本身只负责把参数递进来 */
-export async function handleCoverRequest(
-  rawUrl: string | null | undefined,
-): Promise<Response> {
+/**
+ * GET /api/cover 的全部逻辑。
+ * 找不到 Bookmark、或磁盘上还没有图，都是「显影中」。
+ */
+export function handleCoverRequest(rawUrl: string | null | undefined): Response {
   const target = parseCoverTarget(rawUrl);
   if (!target.ok) {
     return Response.json({ error: target.message }, { status: 400 });
   }
 
-  const image = await loadCover(target.url);
-  if (!image.ok) {
-    return Response.json({ error: "显影中" }, { status: 404 });
+  const row = getDb()
+    .prepare("SELECT id FROM bookmarks WHERE url = ?")
+    .get(target.url) as { id: number } | undefined;
+
+  if (!row) return developing();
+
+  const stored = readCover(row.id);
+  if (!stored) {
+    scheduleCapture(row.id);
+    return developing();
   }
 
-  return new Response(image.body, {
+  return new Response(new Uint8Array(stored.body), {
     status: 200,
     headers: {
-      "Content-Type": image.contentType,
+      "Content-Type": stored.contentType,
       "Cache-Control": "public, max-age=86400",
     },
   });

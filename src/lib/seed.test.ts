@@ -22,6 +22,8 @@ function useFreshDatabase(): void {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nav-test-"));
   tempDirs.push(dir);
   process.env.NAV_DB_PATH = path.join(dir, "nav.db");
+  process.env.NAV_ARCHIVE_DIR = dir;
+  process.env.NAV_DISABLE_CAPTURE = "1";
 }
 
 beforeEach(() => {

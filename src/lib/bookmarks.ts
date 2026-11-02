@@ -1,3 +1,5 @@
+import { hasSnapshot } from "./archive";
+import { discardArchive, scheduleCapture } from "./capture";
 import { getDb } from "./db";
 
 /** 一条书签，tags 已从数据库的 JSON 字符串解析成数组 */
@@ -9,6 +11,8 @@ export interface Bookmark {
   tags: string[];
   created_at: string;
   updated_at: string;
+  /** 磁盘上有没有正文快照。不是数据库列。 */
+  snapshot: boolean;
 }
 
 /** 数据库里的原始行：tags 是 JSON 字符串 */
@@ -70,7 +74,7 @@ function toBookmark(row: BookmarkRow): Bookmark {
     // tags 字段损坏时退化为空数组，不让整条书签读不出来
     tags = [];
   }
-  return { ...row, tags };
+  return { ...row, tags, snapshot: hasSnapshot(row.id) };
 }
 
 /** 转义 LIKE 通配符，避免用户输入的 % / _ 变成通配符 */
@@ -247,6 +251,7 @@ export function createBookmark(input: CreateInput): Bookmark {
 
     const created = getBookmark(Number(result.lastInsertRowid));
     if (!created) throw new NavError("写入后未找到新书签", 500);
+    if (process.env.NAV_DISABLE_CAPTURE !== "1") scheduleCapture(created.id);
     return created;
   } catch (error) {
     if (error instanceof NavError) throw error;
@@ -261,9 +266,11 @@ export function createBookmark(input: CreateInput): Bookmark {
 export function updateBookmark(id: number, patch: UpdateInput): Bookmark {
   const db = getDb();
 
-  if (!getBookmark(id)) {
+  const existing = getBookmark(id);
+  if (!existing) {
     throw new NavError(`书签不存在：${id}`, 404);
   }
+  const urlChanged = patch.url !== undefined && patch.url !== existing.url;
 
   const sets: string[] = [];
   const params: unknown[] = [];
@@ -300,6 +307,10 @@ export function updateBookmark(id: number, patch: UpdateInput): Bookmark {
 
   const updated = getBookmark(id);
   if (!updated) throw new NavError(`书签不存在：${id}`, 404);
+  if (urlChanged) {
+    discardArchive(id);
+    if (process.env.NAV_DISABLE_CAPTURE !== "1") scheduleCapture(id);
+  }
   return updated;
 }
 
@@ -309,6 +320,7 @@ export function deleteBookmark(id: number): void {
   if (result.changes === 0) {
     throw new NavError(`书签不存在：${id}`, 404);
   }
+  discardArchive(id);
 }
 
 export interface TagCount {
