@@ -27,7 +27,7 @@ export default function EditActions({ onEdit, onDelete, onSnapshot, className = 
 
   return (
     <span
-      className={`relative z-10 inline-flex items-center gap-3 font-mono text-[10px] tracking-[0.14em] uppercase ${className}`}
+      className={`relative z-10 inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.14em] uppercase ${className}`}
     >
       {confirming ? (
         <>
@@ -38,7 +38,7 @@ export default function EditActions({ onEdit, onDelete, onSnapshot, className = 
               setConfirming(false);
               onDelete();
             }}
-            className="text-seal transition-colors hover:underline"
+            className="cursor-pointer rounded-sm border border-seal/40 bg-seal/[0.06] px-1.5 py-0.5 text-seal transition-colors hover:bg-seal hover:text-paper"
           >
             确认删除
           </button>
@@ -48,7 +48,7 @@ export default function EditActions({ onEdit, onDelete, onSnapshot, className = 
               guard(event);
               setConfirming(false);
             }}
-            className="text-ink-soft transition-colors hover:text-ink"
+            className="cursor-pointer rounded-sm border border-transparent px-1.5 py-0.5 text-ink-soft transition-colors hover:border-ink/30 hover:bg-ink/[0.06] hover:text-ink"
           >
             取消
           </button>
@@ -62,7 +62,7 @@ export default function EditActions({ onEdit, onDelete, onSnapshot, className = 
                 guard(event);
                 onSnapshot();
               }}
-              className="text-ink-soft transition-colors hover:text-ink"
+              className="cursor-pointer rounded-sm border border-transparent px-1.5 py-0.5 text-ink-soft transition-colors hover:border-ink/30 hover:bg-ink/[0.06] hover:text-ink"
             >
               取快照
             </button>
@@ -73,7 +73,7 @@ export default function EditActions({ onEdit, onDelete, onSnapshot, className = 
               guard(event);
               onEdit();
             }}
-            className="text-ink-soft transition-colors hover:text-ink"
+            className="cursor-pointer rounded-sm border border-transparent px-1.5 py-0.5 text-ink-soft transition-colors hover:border-ink/30 hover:bg-ink/[0.06] hover:text-ink"
           >
             改
           </button>
@@ -83,7 +83,7 @@ export default function EditActions({ onEdit, onDelete, onSnapshot, className = 
               guard(event);
               setConfirming(true);
             }}
-            className="text-ink-soft transition-colors hover:text-seal"
+            className="cursor-pointer rounded-sm border border-transparent px-1.5 py-0.5 text-ink-soft transition-colors hover:border-seal/40 hover:bg-seal/[0.08] hover:text-seal"
           >
             删
           </button>

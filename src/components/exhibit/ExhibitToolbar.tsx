@@ -130,7 +130,7 @@ export default function ExhibitToolbar({
                   className={`inline-flex shrink-0 items-center gap-2 border px-2.5 py-1 font-mono text-[10px] tracking-[0.12em] uppercase transition-colors ${
                     isSelected
                       ? "border-ink/40 bg-ink/[0.06] text-ink"
-                      : "border-transparent text-ink-soft hover:text-ink"
+                      : "cursor-pointer border-transparent text-ink-soft hover:border-ink/30 hover:bg-ink/[0.06] hover:text-ink"
                   }`}
                 >
                   <span

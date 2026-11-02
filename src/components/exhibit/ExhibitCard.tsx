@@ -81,7 +81,7 @@ export default function ExhibitCard({
               type="button"
               onClick={() => onToggleTag(tag)}
               title={`筛选「${tag}」`}
-              className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-soft transition-colors hover:text-ink"
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-sm border border-transparent px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-soft transition-colors hover:border-ink/30 hover:bg-ink/[0.06] hover:text-ink"
             >
               <span
                 aria-hidden

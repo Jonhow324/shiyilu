@@ -169,7 +169,7 @@ export default function ExhibitIndex({
                       type="button"
                       onClick={() => onToggleTag(tag)}
                       title={`筛选「${tag}」`}
-                      className="inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.12em] text-ink-soft uppercase transition-colors hover:text-ink"
+                      className="inline-flex cursor-pointer items-center gap-1.5 rounded-sm border border-transparent px-1.5 py-0.5 font-mono text-[10px] tracking-[0.12em] text-ink-soft uppercase transition-colors hover:border-ink/30 hover:bg-ink/[0.06] hover:text-ink"
                     >
                       <span
                         aria-hidden
