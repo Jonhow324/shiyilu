@@ -5,7 +5,8 @@ import path from "node:path";
 import { after, beforeEach, describe, it } from "node:test";
 import { coverPath, snapshotPath } from "./archive";
 import { createBookmark, deleteBookmark } from "./bookmarks";
-import { captureCover, captureSnapshot, isRealCover } from "./capture";
+import { isRealCover } from "./cover";
+import { captureCover, captureSnapshot } from "./capture";
 import { getDb } from "./db";
 
 const globalForDb = globalThis as unknown as { __navDb?: { close: () => void } };
@@ -42,11 +43,13 @@ function imageResponse(bytes: number, contentType = "image/jpeg", status = 200):
 }
 
 describe("isRealCover", () => {
-  it("小图、非图片、非 2xx 都不算", () => {
-    assert.equal(isRealCover(200, "image/jpeg", 8192), true);
-    assert.equal(isRealCover(200, "image/jpeg", 8191), false);
-    assert.equal(isRealCover(200, "text/html", 20000), false);
-    assert.equal(isRealCover(500, "image/jpeg", 20000), false);
+  it("小图、GIF 占位、非图片、非 2xx 都不算", () => {
+    assert.equal(isRealCover(200, "image/jpeg", 20_000), true);
+    assert.equal(isRealCover(200, "image/jpeg", 19_999), false);
+    assert.equal(isRealCover(200, "image/gif", 50_000), false);
+    assert.equal(isRealCover(200, "image/gif", 8737), false);
+    assert.equal(isRealCover(200, "text/html", 50_000), false);
+    assert.equal(isRealCover(500, "image/jpeg", 50_000), false);
   });
 });
 
@@ -57,8 +60,8 @@ describe("captureCover", () => {
 
     globalThis.fetch = async (input) => {
       calls.push(String(input));
-      if (calls.length === 1) return imageResponse(100);
-      return imageResponse(9000);
+      if (calls.length === 1) return imageResponse(8737, "image/gif");
+      return imageResponse(25_000);
     };
 
     await captureCover(bookmark.id);
@@ -66,7 +69,7 @@ describe("captureCover", () => {
     assert.equal(calls.length, 2);
     assert.ok(calls[0].includes("mshots"));
     assert.ok(fs.existsSync(coverPath(bookmark.id)));
-    assert.ok(fs.readFileSync(coverPath(bookmark.id)).byteLength >= 8192);
+    assert.ok(fs.readFileSync(coverPath(bookmark.id)).byteLength >= 20_000);
   });
 });
 
@@ -105,7 +108,7 @@ describe("删除 Bookmark", () => {
     const paragraph = "留下来的正文。".repeat(80);
     globalThis.fetch = async (input) => {
       const target = String(input);
-      if (target.includes("mshots")) return imageResponse(9000);
+      if (target.includes("mshots")) return imageResponse(25_000);
       return new Response(`<article><p>${paragraph}</p></article>`, { status: 200 });
     };
 

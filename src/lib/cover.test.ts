@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, it } from "node:test";
-import { writeCover } from "./archive";
+import { coverPath, writeCover } from "./archive";
 import { getDb } from "./db";
 import { coverUpstreamUrl, handleCoverRequest, parseCoverTarget } from "./cover";
 
@@ -77,7 +77,8 @@ describe("handleCoverRequest", () => {
     const result = getDb()
       .prepare("INSERT INTO bookmarks (title, url) VALUES (?, ?)")
       .run("示例", "https://example.com/page");
-    writeCover(Number(result.lastInsertRowid), Buffer.from("stored-image"), "image/png");
+    const body = Buffer.alloc(25_000, 1);
+    writeCover(Number(result.lastInsertRowid), body, "image/png");
 
     globalThis.fetch = () => {
       throw new Error("不该请求上游");
@@ -87,6 +88,22 @@ describe("handleCoverRequest", () => {
 
     assert.equal(response.status, 200);
     assert.equal(response.headers.get("content-type"), "image/png");
-    assert.equal(await response.text(), "stored-image");
+    assert.equal((await response.arrayBuffer()).byteLength, 25_000);
+  });
+
+  it("磁盘上的占位 GIF 会删掉并返回显影中", async () => {
+    useFreshDatabase();
+    const result = getDb()
+      .prepare("INSERT INTO bookmarks (title, url) VALUES (?, ?)")
+      .run("示例", "https://example.com/page");
+    const id = Number(result.lastInsertRowid);
+    writeCover(id, Buffer.alloc(8737, 1), "image/gif");
+
+    const response = await handleCoverRequest("https://example.com/page");
+    const text = await response.text();
+
+    assert.equal(response.status, 404);
+    assert.deepEqual(JSON.parse(text), { error: "显影中" });
+    assert.equal(fs.existsSync(coverPath(id)), false);
   });
 });

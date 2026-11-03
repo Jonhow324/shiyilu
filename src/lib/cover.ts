@@ -1,5 +1,5 @@
 import { getDb } from "./db";
-import { readCover } from "./archive";
+import { readCover, removeCover } from "./archive";
 import { scheduleCapture } from "./capture";
 
 /**
@@ -10,6 +10,20 @@ import { scheduleCapture } from "./capture";
  */
 
 const COVER_WIDTH = 1200;
+
+/** mShots「正在生成」占位图大约 8.7KB 的 GIF；真封面是更大的 JPEG。 */
+const MIN_COVER_BYTES = 20_000;
+
+/**
+ * 合格封面：2xx、非 GIF 的图片、不少于 20KB。
+ * mShots 占位图是 ~8.7KB 的 GIF，两条都过不了。
+ */
+export function isRealCover(status: number, contentType: string, byteLength: number): boolean {
+  if (status < 200 || status >= 300) return false;
+  if (!contentType.startsWith("image/")) return false;
+  if (contentType === "image/gif" || contentType.startsWith("image/gif;")) return false;
+  return byteLength >= MIN_COVER_BYTES;
+}
 
 export type CoverTarget =
   | { ok: true; url: string }
@@ -59,6 +73,16 @@ export function handleCoverRequest(rawUrl: string | null | undefined): Response 
   if (!row) return developing();
 
   const stored = readCover(row.id);
+  // 旧逻辑曾把 mShots 占位 GIF 落盘；读到不合格图就删掉再抓。
+  if (
+    stored &&
+    !isRealCover(200, stored.contentType, stored.body.byteLength)
+  ) {
+    removeCover(row.id);
+    scheduleCapture(row.id);
+    return developing();
+  }
+
   if (!stored) {
     scheduleCapture(row.id);
     return developing();

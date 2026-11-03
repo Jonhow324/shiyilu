@@ -7,7 +7,7 @@ import {
   writeCover,
   writeSnapshot,
 } from "./archive";
-import { coverUpstreamUrl } from "./cover";
+import { coverUpstreamUrl, isRealCover } from "./cover";
 import { extractParagraphs, renderSnapshot } from "./snapshot";
 
 /**
@@ -17,7 +17,6 @@ import { extractParagraphs, renderSnapshot } from "./snapshot";
  * 同一条 Bookmark 不会并发抓两次。
  */
 
-const MIN_COVER_BYTES = 8192;
 const COVER_ATTEMPTS = 4;
 const COVER_RETRY_MS = 4000;
 
@@ -35,11 +34,6 @@ const inFlight = new Set<number>();
 
 function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/** 合格封面：2xx、图片类型、不少于 8KB。mShots 的「正在生成」占位图过不了这条。 */
-export function isRealCover(status: number, contentType: string, byteLength: number): boolean {
-  return status >= 200 && status < 300 && contentType.startsWith("image/") && byteLength >= MIN_COVER_BYTES;
 }
 
 async function fetchCoverOnce(url: string, fetchImpl: typeof fetch): Promise<boolean> {

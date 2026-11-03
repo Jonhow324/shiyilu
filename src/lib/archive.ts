@@ -74,6 +74,13 @@ export function writeSnapshot(id: number, html: string): void {
   fs.writeFileSync(snapshotPath(id), html);
 }
 
+/** 只删封面，不动快照。 */
+export function removeCover(id: number): void {
+  for (const file of [coverPath(id), coverTypePath(id)]) {
+    fs.rmSync(file, { force: true });
+  }
+}
+
 /** 删除这一条的封面和快照。文件不存在不算错。 */
 export function removeArchive(id: number): void {
   for (const file of [coverPath(id), coverTypePath(id), snapshotPath(id)]) {

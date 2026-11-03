@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { hostOf } from "@/components/Favicon";
 
 interface Props {
@@ -11,9 +11,8 @@ interface Props {
 /**
  * 封面：请求自己的 /api/cover，浏览器不直接联系截图服务。
  *
- * 不判加载状态，占位层永远垫在图片下面——图加载出来就盖住它，
- * 加载中或失败时露出来的就是「显影中」。这样不会遇到缓存图 onLoad 不触发、
- * 或者 SSR 与客户端状态不一致的问题。
+ * 占位层永远垫在下面。可见性用 React 状态控制，并在 src 变化后检查
+ * img.complete——缓存图有时不触发 onLoad，刷新后不能靠改 DOM style。
  */
 const RETRY_LIMIT = 6;
 const RETRY_MS = 5000;
@@ -22,7 +21,18 @@ export default function Cover({ url, title }: Props) {
   const host = hostOf(url);
   const initial = (host || title).trim().slice(0, 1).toUpperCase() || "·";
   const [attempt, setAttempt] = useState({ url, n: 0 });
+  const [visible, setVisible] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
   const shown = attempt.url === url ? attempt.n : 0;
+  const src = `/api/cover?url=${encodeURIComponent(url)}&t=${shown}`;
+
+  useEffect(() => {
+    setVisible(false);
+    const img = imgRef.current;
+    if (img?.complete && img.naturalWidth > 0) {
+      setVisible(true);
+    }
+  }, [src]);
 
   return (
     <div className="exhibit-cover relative w-full overflow-hidden bg-[#e8e3d6]">
@@ -42,20 +52,21 @@ export default function Cover({ url, title }: Props) {
 
       {/* eslint-disable-next-line @next/next/no-img-element -- 截图由 /api/cover 代理，不走 next/image */}
       <img
-        src={`/api/cover?url=${encodeURIComponent(url)}&t=${shown}`}
+        ref={imgRef}
+        key={src}
+        src={src}
         alt=""
         loading="lazy"
-        onLoad={(event) => {
-          // 图到了再露出来。加载中若可见，浏览器会把自己的图标画在「显影中」上。
-          event.currentTarget.style.opacity = "1";
-        }}
-        onError={(event) => {
-          event.currentTarget.style.opacity = "0";
+        onLoad={() => setVisible(true)}
+        onError={() => {
+          setVisible(false);
           // 后台还在抓。隔几秒再问一次，问够了就停在「显影中」。
           if (shown >= RETRY_LIMIT) return;
           window.setTimeout(() => setAttempt({ url, n: shown + 1 }), RETRY_MS);
         }}
-        className="absolute inset-0 h-full w-full object-cover opacity-0"
+        className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-200 ${
+          visible ? "opacity-100" : "opacity-0"
+        }`}
       />
     </div>
   );
